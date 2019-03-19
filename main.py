@@ -8,11 +8,11 @@ import pyrebase
 
 # config for Firebase, initialize connect
 config = {
-  'apiKey': "",
+  'apiKey': "AIzaSyBwe2Fqvm4b39l654KUBwLfFf8wBSblLOM",
   'authDomain': "dndonline.firebaseapp.com",
   'databaseURL': "https://dndonline.firebaseio.com",
   'storageBucket': "dndonline.appspot.com",
-  'serviceAccount': ""
+  'serviceAccount': "./creds/dndonline-firebase-adminsdk-pjy9q-999772beeb.json"
 }
 fb = pyrebase.initialize_app(config)
 

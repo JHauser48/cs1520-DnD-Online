@@ -1,13 +1,31 @@
+#hidden{
+	display: none;
+}
+
+#shown{
+	display: inline-block; /*idk if this is the right one*/
+}
+#utilities{
+	display: inline-block;
+	float: right;
+}
+
+#fullchat{
+	width: 100%;
+	display: block;
+}
+
 #chatbox{
 	overflow: none;
 	position: relative;
-	width: 50%;
+	width: 100%;
 	height: 400px;
 	border: 4px groove gray;
 	padding: 10px;
 	display: inline-block;
 	background-color: rgba(241, 241, 212, 0.85);
 }
+
 #chatlog{
 	overflow: auto;
 	position: absolute;
@@ -16,12 +34,19 @@
 	font-family: "Courier New", Courier, monospace;
 	display:inline-block;
 }
-input{
+
+input#text{
 	padding: 10px;
 	border: 4px groove gray;
-	width: 50%;
+	width: 100%;
 	background-color: rgba(241, 241, 212, 0.85);
+	display: block;
 }
+
+.chat{
+  margin-right: 0px;
+}
+
 #leave{
   position: fixed;
   bottom: 15px;
@@ -48,18 +73,39 @@ body{
     margin-bottom: 0px;
 }
 
-.chat{
-  margin-right: 50px;
-}
-
 #sheet{
-    float: right;
+    float: left;
     background-color: rgba(56, 48, 9, 0.966);
     color: rgba(163, 163, 163, 0.966);
-    margin: -8% -12.875% 7% 3%;
+    /*margin: -8% -12.875% 7% 3%;*/
     border-radius: 3px;
     border: 1px solid #DEDEDE;
     font-family: 'MedievalSharp';
+}
+
+#dmstuff{
+    float: left;
+    background-color: rgba(56, 48, 9, 0.966);
+    color: rgba(163, 163, 163, 0.966);
+    /*margin: -8% -12.875% 7% 3%;*/
+    border-radius: 3px;
+    border: 1px solid #DEDEDE;
+    font-family: 'MedievalSharp';
+}
+
+.dmcontent {
+}
+
+.dmmonsterlist{
+  display: inline-block;
+}
+
+.dmmonsteredit{
+  display: inline-block;
+}
+
+.dmencountercontent{
+  display: inline-block;
 }
 
 .col {
@@ -76,12 +122,23 @@ body{
 }
 
 .roll{
-    float: right;
-    margin-right: -35%;
+		display: inline-block;
+		padding: 10px;
+		float: left;
+    margin-right: 0%;
 }
 
 .roll_type{
-    margin-left: -30%;
+    margin-left: 0%;
+}
+
+.rbtn{
+		display: block;
+		margin-left: 15%;
+}
+
+input[type="radio"]{
+		display: inline-block
 }
 
 .btn{
@@ -115,5 +172,5 @@ label {
     font-family: "Trebuchet MS", sans-serif;
     cursor: pointer;
     color: rgb(241, 241, 212);
-    margin-left: -30px;
+    /*margin-left: -30px;*/
 }
