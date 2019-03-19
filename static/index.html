@@ -28,9 +28,13 @@
         <form class="form-inline" action="/joinRoom" method="POST">
           <input class="field" id="user" type="text" placeholder="User Name" name="uname" required>
           <input class="field" id="roomname" type="text" placeholder="Room Name" name="rname" required>
-          <input class="radiobtn" id="player" type="radio" value="Player" name="isPlayer" checked="checked">
-          <input class="radiobtn" id="dm" type="radio" value="DM" name="isPlayer">
-          <button class="btn">Join as Player</button>
+          <div class="rbtn">
+            <input id="player" type="radio" value="Player" name="isPlayer" checked="checked"><label>Player</label>
+          </div>
+          <div class="rbtn">
+            <input id="dm" type="radio" value="DM" name="isPlayer"><label>Dungeon Master</label>
+          </div>
+          <button class="btn">Join Room</button>
         </form>
       </div>
     </body>

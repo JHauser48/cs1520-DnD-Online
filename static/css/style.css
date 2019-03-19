@@ -26,11 +26,29 @@
 
 
 
-input[type=text] {
+.field {
   width: 200px;
   margin-left: 30px;
   border: 2px solid grey;
   border-radius: 2px;
+  display: inline-block;
+}
+
+.rbtn{
+		display: flex;
+		margin-left: 15%;
+}
+
+input[type="radio"]{
+		display: inline-block;
+    /*margin-right: 5%;*/
+}
+
+label {
+    font-family: "Trebuchet MS", sans-serif;
+    cursor: pointer;
+    color: rgb(241, 241, 212);
+    /*margin-left: 10px;*/
 }
 
 .container img{
