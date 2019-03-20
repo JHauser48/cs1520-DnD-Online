@@ -48,6 +48,7 @@ $(document).ready(function(){
           //server has sent the psheet or DM info for this player
           sheet.html(data.msg);   // add sheet to HTML
           raw_sheet = data.raw;   //store JSON
+          console.log(raw_sheet);
           break;
         case 'dmstuff':
           //server has sent the dm sheet
@@ -118,12 +119,14 @@ $(document).ready(function(){
 
     //handle if user asks for dice roll
     $('#dice_roll').click(function(){
-      var adv, disadv;
+      var adv, disadv, mod, mod_val;
       // 1, 0 used to represent true, false respectively for advantage and disadvantage
       adv = $('#adv:checked').val() == "on" ? 1 : 0;
       disadv = $('#disadv:checked').val() == "on" ? 1 : 0;
+      mod = $('#modifier').val();
+      mod_val = mod != "none" ? raw_sheet[mod] : 0;
       // create string from type appended with dice info
-      let msg = JSON.stringify({type: 'dice_roll', dice_type: $('#dice_list').val(), modifier: $('#modifier').val(), adv: adv, disadv: disadv});
+      let msg = JSON.stringify({type: 'dice_roll', dice_type: $('#dice_list').val(), modifier: mod, modifier_value: mod_val, adv: adv, disadv: disadv});
       socket.send(msg);
     });
 
