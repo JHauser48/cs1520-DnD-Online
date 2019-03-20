@@ -37,8 +37,8 @@ mod_stats = {
 }
 
 # helper to roll dice, takes dice type and adv/disadv attributes
-def roll_dice(size, mod, adv, dis, uname):
-  mod_val = modifier(mod)
+def roll_dice(size, mod, mod_v, adv, dis, uname):
+  mod_val = modifier(mod_v)
   mod_msg = ('</br>' + '(modifier): ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
   r1 = random.randint(1, size)
   if (adv != dis):
@@ -52,13 +52,8 @@ def roll_dice(size, mod, adv, dis, uname):
     msg = '(d' + str(size) + '): ' + uname + ' rolled a ' + str(r1) + mod_msg
   return msg
 
-def modifier(mod_type):
-  if mod_type == 'none':
-    return 0
-  else:
-    #stats = get_player_stats(uname, session.get('isPlayer'), session.get('room'))
-    stats = 5
-    return stats // 2
+def modifier(mod_value):
+    return (int(mod_value)-10) // 2
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
 def add_client(clients, room, uname):
@@ -410,7 +405,7 @@ def decide_request(req, uname, isPlayer, clients, room):
     resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
-    msg = roll_dice(int(req['dice_type']),req['modifier'], req['adv'], req['disadv'], uname)
+    msg = roll_dice(int(req['dice_type']),req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname)
     resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
