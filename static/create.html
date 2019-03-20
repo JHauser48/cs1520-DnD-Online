@@ -16,25 +16,24 @@
     <body id="bodybackgound" background="./../static/assets/registerBackground.jpg">
       <div class="topnavbar">
         <a href="">Create Account</a>
-        <a href="./../static/index.html"">Login</a>
+        <a href="./../static/index.html">Login</a>
         <a href="https://www.dandwiki.com/wiki/" target="_blank">Rules</a>
         <img src="./../static/assets/logo.png" width="70px" height="50px">
       </div>
       <div class="container">
 		    <!-- <img src="./assets/image2.png" alt="logo"> -->
-        <form class="form-inline" action="/joinRoom" method="POST">
+        <form class="form-inline" action="/create" method="POST">
           <img src="./../static/assets/image2.png" alt="logo">
           <p class="subtitle">Username: </p>
-          <input class="field" id="username" type="text" placeholder="User Name" name="" required>
+          <input class="field" id="username" type="text" placeholder="User Name" name="username" required>
           <p class="subtitle">Password: </p>
-          <input class="field" id="pasword" type="text" placeholder="Password" name="" required>
+          <input class="field" id="password" type="password" placeholder="Password" name="password" required>
           <p class="subtitle">Confirm Password: </p>
-          <input class="field" id="confirm pasword" type="text" placeholder="Retype Password" name="" required>
+          <input class="field" id="confirmPassword" type="password" placeholder="Retype Password" name="confirmPassword" required>
           <p class="subtitle">Email: </p>
-          <input class="field" id="email" type="text" placeholder="Email" name="" required>
+          <input class="field" id="email" type="email" placeholder="Email" name="email" required>
+          <button class="btn">Create Account</button>
         </form>
-
-            <button class="btn">Create Account</button>
       </div>
     </body>
 </html>

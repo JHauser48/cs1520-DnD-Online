@@ -494,6 +494,14 @@ def add_header(resp):
   resp.headers['Expires'] = '0'
   return resp
 
+@app.route('/create', methods=['POST'])
+def create_account():
+    session['name'] = request.form['username']
+    session['password'] = request.form['password']
+    session['confirmPassword'] = request.form['confirmPassword']
+    session['email'] = request.form['email']
+    return redirect('/static/create.html', code=302)
+
 
 if __name__ == '__main__':
   print("""
