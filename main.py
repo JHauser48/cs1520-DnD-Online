@@ -4,17 +4,6 @@ from flask_sockets import Sockets
 import random
 import json
 from yattag import Doc
-import pyrebase
-
-# config for Firebase, initialize connect
-config = {
-  'apiKey': "AIzaSyBwe2Fqvm4b39l654KUBwLfFf8wBSblLOM",
-  'authDomain': "dndonline.firebaseapp.com",
-  'databaseURL': "https://dndonline.firebaseio.com",
-  'storageBucket': "dndonline.appspot.com",
-  'serviceAccount': "./creds/dndonline-firebase-adminsdk-pjy9q-999772beeb.json"
-}
-fb = pyrebase.initialize_app(config)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'memeslol'
@@ -29,6 +18,7 @@ single_events = ['get_sheet'] # track events where should only be sent to sender
 mod_stats = {
   'none' : 'None',
   'str' : 'Strength',
+  'const' : 'Constitution',
   'dex' : 'Dexterity',
   'intell' : 'Intelligence',
   'wis' : 'Wisdom',
@@ -37,20 +27,21 @@ mod_stats = {
 
 def roll_dice(size, mod, adv, dis, uname):
   mod_val = modifier(mod)
-  r1 = random.randint(1, size) + mod_val
+  mod_msg = ('</br>' + '(modifier): ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
+  r1 = random.randint(1, size)
   if (adv != dis):
     # if distinct values, means rolled 2 dice
-    r2 = random.randint(1, size) + mod_val
+    r2 = random.randint(1, size)
     msg = ('(d' + str(size) + '): ' + uname + ' rolled ' + str(r1) + ' and ' + str(r2) +
     ' with ' + ('advantage' if adv else 'disadvantage') + ': use roll '
-    + (str(max(r1, r2)) if adv else str(min(r1, r2))) + '\n\tmodifier: ' + mod_stats[mod] + ' +' + mod_val)
+    + (str(max(r1, r2)) if adv else str(min(r1, r2))) + mod_msg)
   else:
     # just 1 roll
-    msg = '(d' + str(size) + '): ' + uname + ' rolled a ' + str(r1)
+    msg = '(d' + str(size) + '): ' + uname + ' rolled a ' + str(r1) + mod_msg
   return msg
 
-def modifier(mod_type, uname):
-  if mod == 'none':
+def modifier(mod_type):
+  if mod_type == 'none':
     return 0
   else:
     #stats = get_player_stats(uname, session.get('isPlayer'), session.get('room'))
@@ -353,7 +344,7 @@ def decide_request(req, uname, isPlayer, clients, room):
     resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
-    msg = roll_dice(int(req['dice_type']), req['adv'], req['disadv'], uname)
+    msg = roll_dice(int(req['dice_type']),req['modifier'], req['adv'], req['disadv'], uname)
     resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
