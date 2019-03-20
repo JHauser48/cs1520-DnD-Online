@@ -207,13 +207,13 @@ def get_player_stats(uname, isPlayer, room):
             text('~ Stats ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col armor'):
-            text(f"{raw_resp['armor']} Armor Class")
+            text(raw_resp['armor'] + " Armor Class")
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col hp'):
-            text(f"{raw_resp['hp']} Hit Points")
+            text(raw_resp['hp'] + " Hit Points")
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col heroics'):
-            text(f"{raw_resp['heroics']} Heroics")
+            text(raw_resp['heroics'] + " Heroics")
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col wepbox'):
         with tag('div', klass = 'row'):
@@ -300,7 +300,7 @@ def get_player_stats(uname, isPlayer, room):
             for gem in raw_resp['treasures']['gems']:
               with tag('div', klass ='row'):
                 with tag('div', klass = 'col treasfields'):
-                  text(f"{gem['name']}: {gem['num']}")
+                  text(gem['name'] + ": " + gem['num'])
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col condbox'):
         with tag('div', klass = 'row'):
@@ -308,11 +308,11 @@ def get_player_stats(uname, isPlayer, room):
             text('~ Condition/Speed ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col condfields'):
-            text(f"Base Speed: {raw_resp['base_speed']}")
+            text("Base Speed: " + raw_resp['base_speed'])
           with tag('div', klass = 'col condfields'):
-            text(f"Current Speed: {raw_resp['curr_speed']}")
+            text("Current Speed: " + raw_resp['curr_speed'])
           with tag('div', klass = 'col condfields'):
-            text(f"Current Speed: {raw_resp['condition']}")
+            text("Current Speed: " + raw_resp['condition'])
                 
   else:
     #fake response and probably wont have the same parameters as a real one
