@@ -52,6 +52,7 @@ $(document).ready(function(){
         case 'dmstuff':
           //server has sent the dm sheet
           $('#dmstuff').html(data.msg);   //add sheet to HTML
+          raw_sheet = data.raw; //store JSON
           //get all the content divs for easy access later
           arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];
           //dm sheet div buttons
