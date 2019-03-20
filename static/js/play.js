@@ -46,11 +46,6 @@ $(document).ready(function(){
       }
     }
 
-    //handle closing of socket, go back to index page
-    socket.onclose = function(){
-      window.location.href = "/static/index.html";
-    }
-
     //Begin handlers for user-initiated events
     //handle if user sends message
     $('#text').keypress(function(e){
@@ -84,6 +79,16 @@ $(document).ready(function(){
     //handle if user chooses to leave the room
     $('#leave').click(function(){
       // send leaving message first, and then close the connection
+      let msg = JSON.stringify({type: 'leave'});
+      socket.send(msg);
+      socket.close();
+      window.location.href = "/static/index.html";
+    });
+
+    //handle if user exits page, make sure they leave the room
+    $(window).on('beforeunload', function() {
+      // send leaving message first, and then close the connection
+      console.log("unloading");
       let msg = JSON.stringify({type: 'leave'});
       socket.send(msg);
       socket.close();

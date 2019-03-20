@@ -116,10 +116,13 @@ def get_player_stats(uname, isPlayer, room):
     # use dict to build HTML using library
     doc, tag, text = Doc().tagtext()
     with tag('div', klass = 'row'):
-      with tag('div', klass = 'col sheet_title'):
+      with tag('div', klass = 'col title'):
         text('~ Player Sheet ~')
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col namebox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Character Info ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields'):
             text('Name: ' + raw_resp['name'])
@@ -130,6 +133,9 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col namefields'):
             text('Race: ' + raw_resp['race'])
       with tag('div', klass = 'col levelbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Level/XP ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields'):
             text('Level: ' + raw_resp['level'])
@@ -154,6 +160,9 @@ def get_player_stats(uname, isPlayer, room):
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col attrbox'):
         with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Attributes ~')
+        with tag('div', klass = 'row'):
           with tag('div', klass = 'col str'):
             text(raw_resp['str'] + ' Strength')
         with tag('div', klass = 'row'):
@@ -173,25 +182,22 @@ def get_player_stats(uname, isPlayer, room):
             text(raw_resp['char'] + ' Charisma')
       with tag('div', klass = 'col statbox'):
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col armor'):
-            text(raw_resp['armor'])
+          with tag('div', klass = 'col title'):
+            text('~ Stats ~')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col'):
-            text('Armor Class')
+          with tag('div', klass = 'col armor'):
+            text(f"{raw_resp['armor']} Armor Class")
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col hp'):
-            text(raw_resp['hp'])
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col'):
-            text('Hit Points')
+            text(f"{raw_resp['hp']} Hit Points")
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col heroics'):
-            text(raw_resp['heroics'])
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col'):
-            text('Heroics')
+            text(f"{raw_resp['heroics']} Heroics")
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col wepbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Weapons ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col wepfields'):
             text('Weapon')
@@ -218,6 +224,9 @@ def get_player_stats(uname, isPlayer, room):
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col itembox'):
         with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Items ~')
+        with tag('div', klass = 'row'):
           with tag('div', klass = 'col itemfields'):
             text('Name')
           with tag('div', klass = 'col itemfields'):
@@ -237,10 +246,53 @@ def get_player_stats(uname, isPlayer, room):
             text('Total Weight Carried: ')
           with tag('div', klass = 'col itemfields'):
             text(sum(int(item['weight']) for item in raw_resp['items']))
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col itemfields'):
+            text('Max Carry Weight: ')
           with tag('div', klass = 'col itemfields'):
             text(raw_resp['max_weight'])
-          with tag('div', klass = 'col itemfields'):
-            text('Maximum Carry Weight')
+      with tag('div', klass = 'col treasbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Treasures ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col'):
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields'):
+                text('PP: ' + raw_resp['treasures']['pp'])
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields'):
+                text('GP: ' + raw_resp['treasures']['gp'])
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields'):
+                text('EP: ' + raw_resp['treasures']['ep'])
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields'):
+                text('SP: ' + raw_resp['treasures']['sp'])
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields'):
+                text('CP: ' + raw_resp['treasures']['cp'])
+          with tag('div', klass ='col'):
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col title'):
+                text('~ Gems ~')
+            for gem in raw_resp['treasures']['gems']:
+              with tag('div', klass ='row'):
+                with tag('div', klass = 'col treasfields'):
+                  text(f"{gem['name']}: {gem['num']}")
+    with tag('div', klass = 'row'):
+      with tag('div', klass = 'col condbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Condition/Speed ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col condfields'):
+            text(f"Base Speed: {raw_resp['base_speed']}")
+          with tag('div', klass = 'col condfields'):
+            text(f"Current Speed: {raw_resp['curr_speed']}")
+          with tag('div', klass = 'col condfields'):
+            text(f"Current Speed: {raw_resp['condition']}")
+                
   else:
     #fake response and probably wont have the same parameters as a real one
     raw_resp = {
@@ -319,7 +371,7 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col', id='dmmonsterinfo'):
             text('specific enemy info here')
   resp = doc.getvalue()
-  return resp
+  return (raw_resp, resp) # return both JSON and HTML for sending to JS
 
 # helper to determine what type of request based on header, form response
 def decide_request(req, uname, isPlayer, clients, room):
@@ -345,9 +397,9 @@ def decide_request(req, uname, isPlayer, clients, room):
     # client asking for psheet OR DM info, depending on type, send requested info in JSON
     data = get_player_stats(uname, isPlayer, room)
     if isPlayer:
-        resp = {'msg': data, 'type': 'sheet'}
+        resp = {'msg': data[1], 'type': 'sheet'}
     else:
-        resp = {'msg': data, 'type': 'dmstuff'}
+        resp = {'msg': data[1], 'type': 'dmstuff'}
   return json.dumps(resp) # convert JSON to string
 
 
