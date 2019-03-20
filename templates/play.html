@@ -45,14 +45,23 @@
 									<input type="radio" name = "roll_type" id ="disadv"><label>Disadvantage</label>
 								</div>
 							</div>
-							<select id = "dice_list">
+							<label>Dice Type: <select id = "dice_list">
 								<option value="4">d4</option>
 								<option value="6">d6</option>
 								<option value="8">d8</option>
 								<option value="10">d10</option>
 								<option value="12">d12</option>
 								<option value="20">d20</option>
-							</select>
+							</select></label>
+							<div><label>Modifier: <select id = "modifier">
+								<option value ="none">None</option>
+								<option value="str">Strength</option>
+								<option value="dex">Dexterity</option>
+								<option value="const">Constitution</option>
+								<option value="intell">Intelligence</option>
+								<option value="wis">Wisdom</option>
+								<option value="char">Charisma</option>
+							</select></label></div>
 							<button class = "btn" id ="dice_roll">Roll</button>
 					</div>
 				</div>

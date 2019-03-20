@@ -26,18 +26,36 @@ last_client = []            # use to store previous clients list, compare to tra
 single_events = ['get_sheet'] # track events where should only be sent to sender of event, i.e. not broadcast
 
 # helper to roll dice, takes dice type and adv/disadv attributes
-def roll_dice(size, adv, dis, uname):
-  r1 = random.randint(1, size)
+mod_stats = {
+  'none' : 'None',
+  'str' : 'Strength',
+  'dex' : 'Dexterity',
+  'intell' : 'Intelligence',
+  'wis' : 'Wisdom',
+  'char' : 'Charisma',
+}
+
+def roll_dice(size, mod, adv, dis, uname):
+  mod_val = modifier(mod)
+  r1 = random.randint(1, size) + mod_val
   if (adv != dis):
     # if distinct values, means rolled 2 dice
-    r2 = random.randint(1, size)
+    r2 = random.randint(1, size) + mod_val
     msg = ('(d' + str(size) + '): ' + uname + ' rolled ' + str(r1) + ' and ' + str(r2) +
     ' with ' + ('advantage' if adv else 'disadvantage') + ': use roll '
-    + (str(max(r1, r2)) if adv else str(min(r1, r2))))
+    + (str(max(r1, r2)) if adv else str(min(r1, r2))) + '\n\tmodifier: ' + mod_stats[mod] + ' +' + mod_val)
   else:
     # just 1 roll
     msg = '(d' + str(size) + '): ' + uname + ' rolled a ' + str(r1)
   return msg
+
+def modifier(mod_type, uname):
+  if mod == 'none':
+    return 0
+  else:
+    #stats = get_player_stats(uname, session.get('isPlayer'), session.get('room'))
+    stats = 5
+    return stats // 2
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
 def add_client(clients, room, uname):

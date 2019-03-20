@@ -77,7 +77,7 @@ $(document).ready(function(){
       adv = $('#adv:checked').val() == "on" ? 1 : 0;
       disadv = $('#disadv:checked').val() == "on" ? 1 : 0;
       // create string from type appended with dice info
-      let msg = JSON.stringify({type: 'dice_roll', dice_type: $('#dice_list').val(), adv: adv, disadv: disadv});
+      let msg = JSON.stringify({type: 'dice_roll', dice_type: $('#dice_list').val(), modifier: $('#modifier').val(), adv: adv, disadv: disadv});
       socket.send(msg);
     });
 
