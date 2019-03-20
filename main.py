@@ -131,8 +131,7 @@ def get_player_stats(uname, isPlayer, room):
         {'gp': '32', 'cp': '22',
         'pp': '0', 'ep': '20', 'sp': '0',
         'gems': [{'name': 'rubies', 'num': '2'},
-          {'name': 'sapphires', 'num': '3'}]},
-      'type': 'sheet'
+          {'name': 'sapphires', 'num': '3'}]}
     }
     # use dict to build HTML using library
     doc, tag, text = Doc().tagtext()
@@ -145,38 +144,38 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col title'):
             text('~ Character Info ~')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col namefields'):
+          with tag('div', klass = 'col namefields', id='name'):
             text('Name: ' + raw_resp['name'])
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col namefields'):
+          with tag('div', klass = 'col namefields', id='class'):
             text('Class: ' + raw_resp['class'])
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col namefields'):
+          with tag('div', klass = 'col namefields', id='race'):
             text('Race: ' + raw_resp['race'])
       with tag('div', klass = 'col levelbox'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
             text('~ Level/XP ~')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields'):
+          with tag('div', klass = 'col levelfields', id='level'):
             text('Level: ' + raw_resp['level'])
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields'):
+          with tag('div', klass = 'col levelfields', id='xp'):
             text('Experience Points: ' + raw_resp['xp'])
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields'):
+          with tag('div', klass = 'col levelfields', id='next_xp'):
             text('Next Level Exp: ' + raw_resp['next_xp'])
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields'):
+          with tag('div', klass = 'col levelfields', id='langs'):
             text('Languages: ' + (', ').join(raw_resp['languages']))
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields'):
+          with tag('div', klass = 'col levelfields', id='condenhan'):
             text('Conditions + Enchancements: ' + (', ').join(raw_resp['enhan']))
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields'):
+          with tag('div', klass = 'col levelfields', id='resist'):
             text('Resistances: ' + (', ').join(raw_resp['resist']))
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields'):
+          with tag('div', klass = 'col levelfields', id='specs'):
             text('Special Skills + Abilities: ' + (', ').join(raw_resp['special']))
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col attrbox'):
@@ -184,38 +183,38 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col title'):
             text('~ Attributes ~')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col str'):
+          with tag('div', klass = 'col str', id='str'):
             text(raw_resp['str'] + ' Strength')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col dex'):
+          with tag('div', klass = 'col dex', id='dex'):
             text(raw_resp['dex'] + ' Dexterity')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col const'):
+          with tag('div', klass = 'col const', id='const'):
             text(raw_resp['const'] + ' Constitution')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col intell'):
+          with tag('div', klass = 'col intell', id='intell'):
             text(raw_resp['intell'] + ' Intelligence')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col wis'):
+          with tag('div', klass = 'col wis', id='wis'):
             text(raw_resp['wis'] + ' Wisdom')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col char'):
+          with tag('div', klass = 'col char', id='char'):
             text(raw_resp['char'] + ' Charisma')
       with tag('div', klass = 'col statbox'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
             text('~ Stats ~')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col armor'):
+          with tag('div', klass = 'col armor', id='armor'):
             text(raw_resp['armor'] + " Armor Class")
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col hp'):
+          with tag('div', klass = 'col hp', id='hp'):
             text(raw_resp['hp'] + " Hit Points")
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col heroics'):
+          with tag('div', klass = 'col heroics', id='hero'):
             text(raw_resp['heroics'] + " Heroics")
     with tag('div', klass = 'row'):
-      with tag('div', klass = 'col wepbox'):
+      with tag('div', klass = 'col wepbox', id='weps'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
             text('~ Weapons ~')
@@ -262,15 +261,17 @@ def get_player_stats(uname, isPlayer, room):
               text(item['weight'])
             with tag('div', klass = 'col itemfields'):
               text(item['notes'])
+        with tag('div', id='items'):
+          text() # placeholder in case of new items
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col itemfields'):
             text('Total Weight Carried: ')
-          with tag('div', klass = 'col itemfields'):
+          with tag('div', klass = 'col itemfields', id='weight_total'):
             text(sum(int(item['weight']) for item in raw_resp['items']))
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col itemfields'):
             text('Max Carry Weight: ')
-          with tag('div', klass = 'col itemfields'):
+          with tag('div', klass = 'col itemfields', id='max_weight'):
             text(raw_resp['max_weight'])
       with tag('div', klass = 'col treasbox'):
         with tag('div', klass = 'row'):
@@ -279,27 +280,27 @@ def get_player_stats(uname, isPlayer, room):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col'):
             with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields'):
+              with tag('div', klass = 'col treasfields', id='pp'):
                 text('PP: ' + raw_resp['treasures']['pp'])
             with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields'):
+              with tag('div', klass = 'col treasfields', id='gp'):
                 text('GP: ' + raw_resp['treasures']['gp'])
             with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields'):
+              with tag('div', klass = 'col treasfields', id='ep'):
                 text('EP: ' + raw_resp['treasures']['ep'])
             with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields'):
+              with tag('div', klass = 'col treasfields', id='sp'):
                 text('SP: ' + raw_resp['treasures']['sp'])
             with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields'):
+              with tag('div', klass = 'col treasfields', id='cp'):
                 text('CP: ' + raw_resp['treasures']['cp'])
-          with tag('div', klass ='col'):
+          with tag('div', klass ='col', id='gems'):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col title'):
                 text('~ Gems ~')
             for gem in raw_resp['treasures']['gems']:
               with tag('div', klass ='row'):
-                with tag('div', klass = 'col treasfields'):
+                with tag('div', klass = 'col treasfields', id=gem['name']):
                   text(gem['name'] + ": " + gem['num'])
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col condbox'):
@@ -307,11 +308,11 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col title'):
             text('~ Condition/Speed ~')
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col condfields'):
+          with tag('div', klass = 'col condfields', id='base_speed'):
             text("Base Speed: " + raw_resp['base_speed'])
-          with tag('div', klass = 'col condfields'):
+          with tag('div', klass = 'col condfields', id='curr_speed'):
             text("Current Speed: " + raw_resp['curr_speed'])
-          with tag('div', klass = 'col condfields'):
+          with tag('div', klass = 'col condfields', id='cond'):
             text("Current Speed: " + raw_resp['condition'])
                 
   else:

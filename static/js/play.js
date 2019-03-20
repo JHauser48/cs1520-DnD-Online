@@ -10,7 +10,7 @@ $(document).ready(function(){
     var socket_uri = scheme + window.location.hostname + ':' + location.port + '/play';
     socket = new WebSocket(socket_uri);         //create socket for URI
     var sheet = $('#sheet');        //save sheet element for adding in sheet/DM info
-    var raw_sheet; //JSON version of sheet, use for updates during session
+    var raw_sheet; //JSON version of sheet, use for updates during session, send back to server at end for updating in DB
 
     // begin event handlers for socket
     //when new connection opened, should send type: enter
@@ -80,8 +80,8 @@ $(document).ready(function(){
 
     //handle if user chooses to leave the room
     $('#leave').click(function(){
-      // send leaving message first, and then close the connection
-      let msg = JSON.stringify({type: 'leave'});
+      // send leaving message first with updated sheet, and then close the connection
+      let msg = JSON.stringify({type: 'leave', msg: raw_sheet});
       socket.send(msg);
       socket.close();
       window.location.href = "/static/index.html";
@@ -89,9 +89,9 @@ $(document).ready(function(){
 
     //handle if user exits page, make sure they leave the room
     $(window).on('beforeunload', function() {
-      // send leaving message first, and then close the connection
+      // send leaving message first w/ updated sheet, and then close the connection
       console.log("unloading");
-      let msg = JSON.stringify({type: 'leave'});
+      let msg = JSON.stringify({type: 'leave', msg: raw_sheet});
       socket.send(msg);
       socket.close();
     });
