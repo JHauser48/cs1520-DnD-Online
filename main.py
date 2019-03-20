@@ -1,4 +1,4 @@
-from flask import Flask, url_for, redirect, render_template, request
+from flask import Flask, url_for, redirect, render_template, request, abort
 from flask import session, jsonify
 from flask_sockets import Sockets
 import random
@@ -496,11 +496,11 @@ def add_header(resp):
 
 @app.route('/create', methods=['POST'])
 def create_account():
-    session['name'] = request.form['username']
-    session['password'] = request.form['password']
-    session['confirmPassword'] = request.form['confirmPassword']
-    session['email'] = request.form['email']
-    return redirect('/static/create.html', code=302)
+    if(request.form['password'] != request.form['confirmPassword']):   
+        redirect('/static/create.html', code=302)
+    db.child(request.form['username']).push({"password": request.form['password']})
+    db.child(request.form['username']).push({"email": request.form['email']})
+    return redirect('/static/index.html', code=302)
 
 
 if __name__ == '__main__':
