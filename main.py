@@ -4,9 +4,20 @@ from flask_sockets import Sockets
 import random
 import json
 from yattag import Doc
+import pyrebase
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'memeslol'
+
+# firebase config
+config = {
+  "apiKey": "AIzaSyBwe2Fqvm4b39l654KUBwLfFf8wBSblLOM",
+  "authDomain": "dndonline.firebaseapp.com",
+  "databaseURL": "https://dndonline.firebaseio.com",
+  "storageBucket": "dndonline.appspot.com",
+  "serviceAccount": "./creds/dndonline-firebase-adminsdk-pjy9q-999772beeb.json"
+}
+fb = pyrebase.initialize_app(config) # initialize firebase connection
 
 sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
