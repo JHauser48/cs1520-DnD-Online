@@ -394,7 +394,7 @@ def get_player_stats(uname, isPlayer, room):
             text('specific enemy info here')
   
   resp = doc.getvalue()
-  return (raw_resp, resp) # return both JSON and HTML for sending to JS
+  return raw_resp, resp # return both JSON and HTML for sending to JS
 
 # helper to determine what type of request based on header, form response
 def decide_request(req, uname, isPlayer, clients, room):
@@ -419,11 +419,11 @@ def decide_request(req, uname, isPlayer, clients, room):
   elif req_type == 'get_sheet':
     # client asking for psheet OR DM info, depending on type, send requested info
     # include both formatted HTML and raw JSON
-    data = get_player_stats(uname, isPlayer, room)
+    jsonstr, data = get_player_stats(uname, isPlayer, room)
     if isPlayer:
-        resp = {'msg': data[1], 'raw': data[0], 'type': 'sheet'}
+        resp = {'msg': data, 'raw': jsonstr, 'type': 'sheet'}
     else:
-        resp = {'msg': data[1], 'raw': data[0], 'type': 'dmstuff'}
+        resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
   return json.dumps(resp) # convert JSON to string
 
 
