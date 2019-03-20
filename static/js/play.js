@@ -10,6 +10,7 @@ $(document).ready(function(){
     var socket_uri = scheme + window.location.hostname + ':' + location.port + '/play';
     socket = new WebSocket(socket_uri);         //create socket for URI
     var sheet = $('#sheet');        //save sheet element for adding in sheet/DM info
+    var raw_sheet; //JSON version of sheet, use for updates during session
 
     // begin event handlers for socket
     //when new connection opened, should send type: enter
@@ -42,6 +43,7 @@ $(document).ready(function(){
         case 'sheet':
           //server has sent the psheet or DM info for this player
           sheet.html(data.msg);   // add sheet to HTML
+          raw_sheet = data.raw;   //store JSON
           break;
       }
     }

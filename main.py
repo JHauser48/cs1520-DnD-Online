@@ -18,6 +18,7 @@ config = {
   "serviceAccount": "./creds/dndonline-firebase-adminsdk-pjy9q-999772beeb.json"
 }
 fb = pyrebase.initialize_app(config) # initialize firebase connection
+db = fb.database()        # ref to database
 
 sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
@@ -25,7 +26,6 @@ r_to_client = {}                # map room to list of Clients connected`(uses Ob
 last_client = []            # use to store previous clients list, compare to track clients
 single_events = ['get_sheet'] # track events where should only be sent to sender of event, i.e. not broadcast
 
-# helper to roll dice, takes dice type and adv/disadv attributes
 mod_stats = {
   'none' : 'None',
   'str' : 'Strength',
@@ -36,6 +36,7 @@ mod_stats = {
   'char' : 'Charisma',
 }
 
+# helper to roll dice, takes dice type and adv/disadv attributes
 def roll_dice(size, mod, adv, dis, uname):
   mod_val = modifier(mod)
   mod_msg = ('</br>' + '(modifier): ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
@@ -390,6 +391,7 @@ def get_player_stats(uname, isPlayer, room):
             text('turn order stuff here')
           with tag('div', klass = 'col', id='dmmonsterinfo'):
             text('specific enemy info here')
+  
   resp = doc.getvalue()
   return (raw_resp, resp) # return both JSON and HTML for sending to JS
 
@@ -414,12 +416,13 @@ def decide_request(req, uname, isPlayer, clients, room):
     remove_client(uname, room)
     resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
   elif req_type == 'get_sheet':
-    # client asking for psheet OR DM info, depending on type, send requested info in JSON
+    # client asking for psheet OR DM info, depending on type, send requested info
+    # include both formatted HTML and raw JSON
     data = get_player_stats(uname, isPlayer, room)
     if isPlayer:
-        resp = {'msg': data[1], 'type': 'sheet'}
+        resp = {'msg': data[1], 'raw': data[0], 'type': 'sheet'}
     else:
-        resp = {'msg': data[1], 'type': 'dmstuff'}
+        resp = {'msg': data[1], 'raw': data[0], 'type': 'dmstuff'}
   return json.dumps(resp) # convert JSON to string
 
 
