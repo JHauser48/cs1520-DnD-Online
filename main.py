@@ -346,7 +346,7 @@ def get_player_stats(uname, isPlayer, room):
     # use dict to build HTML using library
     doc, tag, text = Doc().tagtext()
     with tag('div', klass = 'row'):
-      with tag('div', klass = 'col sheet_title'):
+      with tag('div', klass = 'col title'):
         text(' ~ DM Sheet ~ ')
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col dmbutton', id='encounter'):

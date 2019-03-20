@@ -3,8 +3,12 @@ var uname;
 console.log("before doc");
 $(document).ready(function(){
     console.log("doc loaded");
-    //store uname for this client
-    uname = $('#curr_user').text().split(', ')[1];
+    //store client name, room name, and if the player is a dm or a regular Player
+    arr = $('#hidden').text().split('roomname: ')[1].split(", clientname: ");
+    roomname = arr[0];
+    uname = arr[1].split(', isplayerordm: ')[0];
+    isPlayer = (arr[1].split(', isplayerordm: ')[1] === 'True') ? true : false;
+    console.log(roomname + ' ' + uname + ' ' + isPlayer);
     // if https, must be wss, otherwise ws
     var scheme = window.location.protocol == "https:" ? 'wss://' : 'ws://';
     var socket_uri = scheme + window.location.hostname + ':' + location.port + '/play';
@@ -44,6 +48,50 @@ $(document).ready(function(){
           //server has sent the psheet or DM info for this player
           sheet.html(data.msg);   // add sheet to HTML
           raw_sheet = data.raw;   //store JSON
+          break;
+        case 'dmstuff':
+          //server has sent the dm sheet
+          $('#dmstuff').html(data.msg);   //add sheet to HTML
+          //get all the content divs for easy access later
+          arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];
+          //dm sheet div buttons
+          //need to be defined here so we know the dm sheet has been loaded
+          $('#notes').click(function(){
+            arrDmContentDiv.forEach(function(div){
+              if(div.attr('id') === 'shown') div.attr('id', 'hidden');
+              if(div.attr('class') === 'col dmnotes') div.attr('id', 'shown');
+            });
+          });
+          $('#monster').click(function(){
+            arrDmContentDiv.forEach(function(div){
+              if(div.attr('id') === 'shown') div.attr('id', 'hidden');
+              if(div.attr('class') === 'col dmmonster') div.attr('id', 'shown');
+            });
+          });
+          $('#encounter').click(function(){
+            arrDmContentDiv.forEach(function(div){
+              if(div.attr('id') === 'shown') div.attr('id', 'hidden');
+              if(div.attr('class') === 'col dmencounter') div.attr('id', 'shown');
+            });
+          });
+          //get monster divs from monster list in the edit monster div
+          $('#mmonsterlist').children('div').each(function(){
+            //the next div is the one with the json in it
+            //var monsterjson = JSON.parse($(this).children().html());
+            $(this).click(function(){
+              console.log('Clicked');
+              $('#monsteredit').html($(this).children().html());
+            });
+          });
+          //get monster divs from monster list in the encounter div
+          $('#emonsterlist').children('div').each(function(){
+            //the next div is the one with the json in it
+            //var monsterjson = JSON.parse($(this).children().html());
+            $(this).click(function(){
+              console.log('Clicked');
+              $('#dmmonsterinfo').html($(this).children().html());
+            });
+          });
           break;
       }
     }

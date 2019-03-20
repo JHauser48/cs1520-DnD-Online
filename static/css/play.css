@@ -97,6 +97,11 @@ body{
 .dmcontent {
 }
 
+#dmtextarea{
+  width: 100%;
+  height: 100%;
+}
+
 .dmmonsterlist{
   display: inline-block;
 }
