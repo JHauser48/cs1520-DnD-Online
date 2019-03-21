@@ -35,6 +35,19 @@
 	display:inline-block;
 }
 
+#psheetchange{
+  border: 0px;
+  margin: 1px 1px 1px 25px;
+}
+
+.attr_amt{
+  margin: 3px;
+}
+
+.btn.attr_amt{
+  font-size: 20px;
+}
+
 input#text{
 	padding: 10px;
 	border: 4px groove gray;
@@ -153,7 +166,7 @@ input[type="radio"]{
   color: #FF0000;
   padding: 8px 16px;
   text-decoration: none;
-  margin: 4px 2px;
+  margin: 4px 3px;
   cursor: pointer;
   margin-right: auto;
   margin-left: auto;
