@@ -19,6 +19,7 @@ config = {
 }
 fb = pyrebase.initialize_app(config) # initialize firebase connection
 db = fb.database()        # ref to database
+auth = fb.auth()
 
 sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
@@ -493,8 +494,10 @@ def add_header(resp):
 def create_account():
     if(request.form['password'] != request.form['confirmPassword']):   
         redirect('/static/create.html', code=302)
-    db.child(request.form['username']).push({"password": request.form['password']})
-    db.child(request.form['username']).push({"email": request.form['email']})
+    user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
+    auth.send_email_verification(user['idToken'])
+    newData = {"username": request.form['username'], "email": request.form['email']}
+    db.child('user').push(newData)
     return redirect('/static/index.html', code=302)
 
 
