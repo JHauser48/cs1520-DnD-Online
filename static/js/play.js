@@ -15,6 +15,7 @@ $(document).ready(function(){
     socket = new WebSocket(socket_uri);         //create socket for URI
     var sheet = $('#sheet');        //save sheet element for adding in sheet/DM info
     var raw_sheet; //JSON version of sheet, use for updates during session, send back to server at end for updating in DB
+    var l2x;      //used for players that need xp for next level, map level to needed XP
 
     // begin event handlers for socket
     //when new connection opened, should send type: enter
@@ -48,11 +49,19 @@ $(document).ready(function(){
           //server has sent the psheet or DM info for this player
           sheet.html(data.msg);   // add sheet to HTML
           raw_sheet = data.raw;   //store JSON
-          console.log(raw_sheet);
+          l2x = data.l2x; //save level xp info
+          //add current gems into options for changing
+          let gem_html = "";
+          raw_sheet.treasures.gems.forEach((gem) => {
+            let gem_name = gem.name
+            gem_html += `<option value="${gem_name}">${gem_name}</option>`
+          }); 
+          $('#change_attrs').append(gem_html);
           break;
         case 'dmstuff':
           //server has sent the dm sheet
           $('#dmstuff').html(data.msg);   //add sheet to HTML
+          raw_sheet = data.raw; //store JSON
           //get all the content divs for easy access later
           arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];
           //dm sheet div buttons
@@ -129,6 +138,96 @@ $(document).ready(function(){
       socket.send(msg);
     });
 
+    //handle if user submits attr change
+    $('.btn.attr_amt').click(function(){
+      let attr_field = $('#attr_num');
+      let attr_num = attr_field.val(); //get number entered in
+      //must be a non-negative number and not empty, output error otherwise
+      if (!(/^\+?\d+$/.test(attr_num))) {
+        attr_field[0].setCustomValidity('Value must be a non-negative integer');
+        attr_field[0].reportValidity();
+        return;
+      }
+      attr_field[0].setCustomValidity('');
+      let but_id = this.id; //which button (up_attr or down_attr)
+      let attr_type = $('#change_attrs').val(); //which attr
+      change_attr(but_id, attr_type, attr_num);
+    });
+
+    //helper to change attribute based on params of client
+    function change_attr(but, attr, num){
+      // store if addition or subtraction
+      let add_type = (but == 'up_attr') ? true : false;
+      let curr, curr_html = 0;   //used for old values
+      //switch based on attr type, most fall into major groups
+      switch(attr){
+        case 'xp':
+        case 'str':
+        case 'str_mod':
+        case 'dex':
+        case 'dex_mod':
+        case 'const':
+        case 'const_mod':
+        case 'intell':
+        case 'intell_mod':
+        case 'wis':
+        case 'wis_mod':
+        case 'char':
+        case 'char_mod':
+        case 'armor':
+        case 'hp':
+        case 'hero':
+        case 'max_weight':
+        case 'base_speed':
+        case 'curr_speed':
+          curr = Number(raw_sheet[attr]); //retrieve current value
+          if (add_type){
+            curr += Number(num);
+          } else {
+            curr -= Number(num);
+          }
+          raw_sheet[attr] = curr; //update in JSON 
+          break;
+        case 'pp':
+        case 'gp':
+        case 'ep':
+        case 'sp':
+        case 'cp':
+          curr = Number(raw_sheet['treasures'][attr]); //retrieve current value
+          if (add_type){
+            curr += Number(num);
+          } else {
+            curr -= Number(num);
+          }
+          raw_sheet['treasures'][attr] = curr; 
+          break;
+        default:
+          // only attrs in default should be gems
+          let curr_gem = "";
+          let gem_idx = 0;
+          for (let gem of raw_sheet.treasures.gems){
+            if (gem['name'] == attr) {
+              curr_gem = gem;
+              break;
+            }
+            gem_idx++;
+          }
+          curr = Number(curr_gem['num']); //retrieve current value
+          if (add_type){
+            curr += Number(num);
+          } else {
+            curr -= Number(num);
+          }
+          raw_sheet['treasures']['gems'][gem_idx]['num'] = curr;
+          break;
+      }
+      // now update HTML for property
+      curr_html = $('#' + attr).html();
+      //replace digits in HTML with new digits
+      curr_html = curr_html.replace(/\d+/g, curr);
+      $('#' + attr).html(curr_html); //set new HTML
+    }
+  
     //handle if user chooses to leave the room
     $('#leave').click(function(){
       // send leaving message first with updated sheet, and then close the connection

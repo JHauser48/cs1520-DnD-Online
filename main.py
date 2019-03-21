@@ -26,6 +26,28 @@ u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
 last_client = []            # use to store previous clients list, compare to track clients
 single_events = ['get_sheet'] # track events where should only be sent to sender of event, i.e. not broadcast
+# map level to amount of XP needed
+level_to_xp = {
+  2: '300',
+  3: '900',
+  4: '2700',
+  5: '6500',
+  6: '14000',
+  7: '23000',
+  8: '34000',
+  9: '48000',
+  10: '64000',
+  11: '85000',
+  12: '100000',
+  13: '120000',
+  14: '140000',
+  15: '165000',
+  16: '195000',
+  17: '225000',
+  18: '265000',
+  19: '305000',
+  20: '355000'
+}
 
 mod_stats = {
   'none' : 'None',
@@ -88,18 +110,24 @@ def get_player_stats(uname, isPlayer, room):
   # build a dict of response stats (HARD CODED FOR TESTING)
   if isPlayer:
     raw_resp = {
+      'sheet_title': 'Test Sheet',
       'name': 'Mikey',
       'class': 'Necromancer',
       'race': 'Dark Elf',
       'str': '74',
+      'str_mod': '2',
       'dex': '56',
+      'dex_mod': '4',
       'const': '22',
+      'const_mod': '0',
       'intell': '65',
+      'intell_mod': '3',
       'wis': '49',
+      'wis_mod': '1',
       'char': '33',
-      'level': '88',
+      'char_mod': '7',
+      'level': '8',
       'xp': '300',
-      'next_xp': '33',
       'languages':
         ['Elvish', 'Dwarf'],
       'enhan':
@@ -160,7 +188,7 @@ def get_player_stats(uname, isPlayer, room):
             text('Experience Points: ' + raw_resp['xp'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='next_xp'):
-            text('Next Level Exp: ' + raw_resp['next_xp'])
+            text('Next Level Exp: ' + level_to_xp[(int(raw_resp['level']) + 1)])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='langs'):
             text('Languages: ' + (', ').join(raw_resp['languages']))
@@ -181,21 +209,33 @@ def get_player_stats(uname, isPlayer, room):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col str', id='str'):
             text(raw_resp['str'] + ' Strength')
+          with tag('div', klass = 'col str', id='str_mod'):
+            text(raw_resp['str_mod'] + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col dex', id='dex'):
             text(raw_resp['dex'] + ' Dexterity')
+          with tag('div', klass = 'col str', id='dex_mod'):
+            text(raw_resp['dex_mod'] + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col const', id='const'):
             text(raw_resp['const'] + ' Constitution')
+          with tag('div', klass = 'col str', id='const_mod'):
+            text(raw_resp['const_mod'] + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col intell', id='intell'):
             text(raw_resp['intell'] + ' Intelligence')
+          with tag('div', klass = 'col str', id='intell_mod'):
+            text(raw_resp['intell_mod'] + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col wis', id='wis'):
             text(raw_resp['wis'] + ' Wisdom')
+          with tag('div', klass = 'col str', id='wis_mod'):
+            text(raw_resp['wis_mod'] + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col char', id='char'):
             text(raw_resp['char'] + ' Charisma')
+          with tag('div', klass = 'col str', id='char_mod'):
+            text(raw_resp['char_mod'] + ' Modifier')
       with tag('div', klass = 'col statbox'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
@@ -309,7 +349,7 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col condfields', id='curr_speed'):
             text("Current Speed: " + raw_resp['curr_speed'])
           with tag('div', klass = 'col condfields', id='cond'):
-            text("Current Speed: " + raw_resp['condition'])
+            text("Current Condition: " + raw_resp['condition'])
                 
   else:
     #fake response and probably wont have the same parameters as a real one
@@ -417,7 +457,7 @@ def decide_request(req, uname, isPlayer, clients, room):
     # include both formatted HTML and raw JSON
     jsonstr, data = get_player_stats(uname, isPlayer, room)
     if isPlayer:
-        resp = {'msg': data, 'raw': jsonstr, 'type': 'sheet'}
+        resp = {'msg': data, 'raw': jsonstr, 'type': 'sheet', 'l2x': level_to_xp}
     else:
         resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
   return json.dumps(resp) # convert JSON to string
