@@ -532,13 +532,13 @@ def add_header(resp):
 
 @app.route('/create', methods=['POST'])
 def create_account():
-    if(request.form['password'] == request.form['confirmPassword']):   
-        user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
-        auth.send_email_verification(user['idToken'])
-        newData = {"username": request.form['username'], "email": request.form['email']}
-        db.child('user').push(newData)
-        return redirect('/static/index.html', code=302)
-    return redirect('/static/create.html', code=302)
+     
+    user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
+    auth.send_email_verification(user['idToken'])
+    newData = {"username": request.form['username'], "email": request.form['email']}
+    db.child('user').push(newData)
+
+    return redirect('/static/login.html', code=302)
     
 
 
