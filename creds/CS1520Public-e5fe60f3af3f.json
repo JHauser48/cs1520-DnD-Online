@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "dndonline",
+  "private_key_id": "e5fe60f3af3fc92c3df98d6cc49f712d33b5b9be",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQDQJqfsBc3pxo69\nVh1sCf4J8oz3B4sPXqTTaA3OSndDncjE2hxY9VzeRK6MOIo5nwvHWQvSllO3VqdC\ntBtM9x6mx7niQeqI/muPydEAgMX6xjlrukPPXzMyQkJzf9mB1lFo3AeSa5ZB8ho8\nGIN0E6isdftu7x+7LBxn/CDvXkabLkk6rMkdQJVz+v2JOm7qFjjX1eujhaYE7b1e\nthAlnvJrWbF/g8eDfR3+YaZ8b14Dgkiti1urSv//OOKB9E1rPep/eb1OFb8SwTQi\nwJy4oSLjrTY12r4JCOWlby8vtWTzOcFF8MjiN+V0Ebp0KiAuGs8dtco59Fm3dSH/\nLhx+kqmJAgMBAAECggEAE/YxEmx4E9xL4hJ5HdxTdYbCSAp8JowwCGopMMhpaZ2f\nHGnCYDGfp1001BO0BdSf341Fmft6qdFwlvAI0je8w8fRpsYlhN/JVu/G0GKJGgSa\nix9A04lQspgyITt4k4AHLKQ1QbB5p3ddVrgPGzmramaiJ0BdbajMTJicW/hRkx4P\nz1CWzpG/3OpUhK8NI/8EwsuwrDGFXm3gBd4oeXUuFaRaQEyXrNVS6hpx0b2Xf5Ul\nHDGQum6e8p8AgKtNlSkrvgAvCHGvt6LFAMUSrKZkoAFutLjOjcjrVKvjkNAHTtMd\nv34+biE4/aWqjHSSJvt0lNQ8sk49wwPbulVyv1MukQKBgQD7CbLA8hqJdpe/+6Gl\nUNyPz+6YF3fhdLJn7aYz65jQDvJXBzAb2BQMvsLJ4MRH4zq+FxmXmQOdQR1AS+TX\nQEjXcc3Kq7x0noI0HTWZlGkx2GImNmf9vo5F/ZrrIAQwULT0SMXDkigiMW38C1mp\n2siX0k+0CWtFRIouRAZ9qmw/FQKBgQDUQ/EGc4wadpkSApisJb5qWh96ALO6ODNA\nG81+ejtEa4nGtXjHRLmvozIHfcEc1voAFd3z+ON+4OUhGry5j2mH5/9n9QvFffYQ\nX7hpBfO0VlwZpR/ulDmmzOLhA3LMpvtjglyYN61j6Yg95TRkv1uu/navEzYGWGBF\nOlAF7i49pQKBgQCg4Es0yTJma6C+QLULq3FdnERsJYYG7vEyFyNO3KnWk+2MBig3\nf9cBf/J2y1seMqm/jjAxbbbaPRNQ1BI4O5MytlTKkBo6piYM3bcuz+RGNERZ9r3X\n6BlnEyoHikIE8IO2lThfp7eeigzQ3Dk+1917JiU73FlpT446Lg/20pOCLQKBgQCz\nqo5ol4UPITOPOwNfMtNp0b6y1cVK6ib3LJFTbMKdtyh3OUNx54oEUG4YSSkb8BrL\n17Z2u0RUMKfAzZDQv8LjdkuJArFkCKouUdcVjiQpkK+ERXAx0OS7etDPBMw2zWAb\nakxVy0rINvNK8KbYX+CKznhG2EvyMvvJnQH/AwvAwQKBgQDW2fJC41FgL7V1cQMI\nDCopSLRc/4yfnXcppk55C5EInoHnb8nEz7z7tcChZo1qimcGquL12SKGpq62FZEp\neoLU4//w4XHkQs0ilkhqeEf3GpgINII0Ex59yiyxcBGv31vei9OpmzA6CpaOr3/c\nDctvoG5k/WqxB9qUmtMlILILEA==\n-----END PRIVATE KEY-----\n",
+  "client_email": "id-520-firestore@dndonline.iam.gserviceaccount.com",
+  "client_id": "104994325244973224044",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/id-520-firestore%40dndonline.iam.gserviceaccount.com"
+}

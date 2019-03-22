@@ -5,21 +5,25 @@ import random
 import json
 from yattag import Doc
 import pyrebase
+from google.cloud import firestore
+from google.oauth2 import service_account
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'memeslol'
 
-# firebase config
+# firebase config (ONLY USED FOR AUTHENTICATION)
 config = {
   "apiKey": "AIzaSyBwe2Fqvm4b39l654KUBwLfFf8wBSblLOM",
   "authDomain": "dndonline.firebaseapp.com",
   "databaseURL": "https://dndonline.firebaseio.com",
   "storageBucket": "dndonline.appspot.com",
-  "serviceAccount": "./creds/dndonline-firebase-adminsdk-pjy9q-999772beeb.json"
+  "serviceAccount": "./creds/dndonline-firebase-adminsdk-pjy9q-183230226d.json"
 }
 fb = pyrebase.initialize_app(config) # initialize firebase connection
-db = fb.database()        # ref to database
 auth = fb.auth()
+creds = service_account.Credentials.from_service_account_file(
+    './creds/CS1520Public-e5fe60f3af3f.json')
+db = firestore.Client(project='dndonline', credentials=creds)
 
 sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
@@ -791,7 +795,6 @@ def decide_request(req, uname, isPlayer, clients, room):
     else:
         resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
   elif req_type == 'change_attr':
-    print('making respons') # DEBUG
     # someone changed a numeric attribute
     direction = 'increased' if req['dir'] else 'decreased'
     lvl_up = ' Level Up!!!' if req['lvl'] else ''
@@ -875,8 +878,8 @@ def create_account():
 
     user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
     auth.send_email_verification(user['idToken'])
-    newData = {"username": request.form['username'], "email": request.form['email']}
-    db.child('user').push(newData)
+    newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
+    db.collection(u'user').add(newData)
 
     return redirect('/static/login.html', code=302)
 
