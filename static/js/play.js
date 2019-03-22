@@ -20,6 +20,49 @@ $(document).ready(function(){
     var l2x;      //used for players that need xp for next level, map level to needed XP
 
     //DM variables
+    var newMonsterEdit = { //new monster info that gets input into the html
+      'size':'<input type=\'text\' name=\'size\' id=\'newMonsterTextField\' placeholder=\'Size\'>',
+      'type':'<input type=\'text\' name=\'type\' id=\'newMonsterTextField\' placeholder=\'Monster Type\'>',
+      'alignment': '<input type=\'text\' name=\'alignment\' id=\'newMonsterTextField\' placeholder=\'Alignment\'>',
+      'ac': '<input type=\'text\' name=\'ac\' id=\'newMonsterTextField\' placeholder=\'AC\'>',
+      'hp': '<input type=\'text\' name=\'hp\' id=\'newMonsterTextField\' placeholder=\'Avg. HP\'>',
+      'hit_dice': {
+      'number': '<input type=\'text\' name=\'number\' id=\'newMonsterHD\'>',
+      'value' : '<input type=\'text\' name=\'value\' id=\'newMonsterHD\'>',
+      },
+      'speed': '<input type=\'text\' name=\'speed\' id=\'newMonsterTextField\' placeholder=\'Speed\'>',
+      'ability_scores' : {
+        'str' : '<input type=\'text\' name=\'str\' id=\'newMonsterTextField\' placeholder=\'Strength Stat\'>',
+        'dex' : '<input type=\'text\' name=\'dex\' id=\'newMonsterTextField\' placeholder=\'Dexterity Stat\'>',
+        'const' : '<input type=\'text\' name=\'const\' id=\'newMonsterTextField\' placeholder=\'Constitution Stat\'>',
+        'intell': '<input type=\'text\' name=\'intell\' id=\'newMonsterTextField\' placeholder=\'Intelligence Stat\'>',
+        'wis' : '<input type=\'text\' name=\'wis\' id=\'newMonsterTextField\' placeholder=\'Wisdom Stat\'>',
+        'char' : '<input type=\'text\' name=\'char\' id=\'newMonsterTextField\' placeholder=\'Charisma Stat\'>'
+      },
+      'saving_throws' : {
+        'str' : '',
+        'dex' : '',
+        'const' : '',
+        'intell': '',
+        'wis' : '',
+        'char' : ''
+      },
+      'c_rating' : '0',
+      'skills' : [], //{'skill-name': '', 'ability': '', 'mod': ''}
+      'resistances' : [],
+      'vulnerabilities' : [],
+      'immunities' : [],
+      'senses' : [],//{'sense': '', 'radius': ''} <--need to modify this cause of passive perception
+      'languages' : [],//{'language': '', 'speak': '', 'understand': ''}
+      'telepathy' : {'radius' : ''},
+      'special_traits' : [],//{'trait': '', 'notes' : ''}
+      'actions' : [],
+      'reactions' : [],
+      'legendary_actions' : {
+        'num_action' : '',
+        'actions' : []
+      }
+    };
     var currentMonsterEdit; //the monster that is currently being edited
     var currentMonsterTurn; //the monster whose turn it is
 
@@ -146,8 +189,9 @@ $(document).ready(function(){
           sheet.html(data.msg);   //add sheet to HTML
           raw_sheet = data.raw; //store JSON
           //get all the content divs for easy access later
-          arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];
-          //dm sheet div buttons
+          arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];//dm sheet div buttons
+
+
           //need to be defined here so we know the dm sheet has been loaded
           $('#notes').click(function(){
             arrDmContentDiv.forEach(function(div){
@@ -167,6 +211,26 @@ $(document).ready(function(){
               if(div.attr('class') === 'col dmencounter') div.attr('id', 'shown');
             });
           });
+          var loadMonsterEdit = function(){
+            currentMonsterEdit = newMonsterEdit;
+            $('#monstername').html('Name: <input type=\'text\' name=\'name\' id=\'newMonsterTextField\' placeholder=\'Monster Name\'>');
+            $('#type').html('Type: ' + currentMonsterEdit.type);
+            $('#size').html('Size: ' + currentMonsterEdit.size);
+            $('#ac').html('AC: ' + currentMonsterEdit.ac);
+            $('#speed').html('Speed: ' + currentMonsterEdit.speed);
+            $('#health').html('Health: ' + currentMonsterEdit.hp);
+            $('#hit_dice').html('Hit Dice: ' + currentMonsterEdit.hit_dice.number + 'd' + currentMonsterEdit.hit_dice.value);
+            console.log(currentMonsterEdit);
+            for(ability in currentMonsterEdit.ability_scores)
+            {
+              $('#ability-scores-' + ability + '-mod').css('display', 'none');
+              //console.log(currentMonsterEdit.ability_scores[ability]);
+              $('#ability-scores-' + ability).html(ability.charAt(0).toUpperCase() + ability.slice(1,3) + ': ' + currentMonsterEdit.ability_scores[ability]);
+            }
+          }
+          //loads the monster editing html by default
+          loadMonsterEdit();
+          $('#newmonsterbtn').click(loadMonsterEdit);
           //get monster divs from monster list in the edit monster div
           $('#mmonsterlist').children('div').each(function(){
             //the next div is the one with the json in it
@@ -180,11 +244,13 @@ $(document).ready(function(){
               $('#speed').html('Speed: ' + currentMonsterEdit.speed);
               $('#health').html('Health: ' + currentMonsterEdit.hp);
               $('#hit_dice').html('Hit Dice: ' + currentMonsterEdit.hit_dice.number + 'd' + currentMonsterEdit.hit_dice.value);
-              console.log(currentMonsterEdit);
+              //console.log(currentMonsterEdit);
               for(ability in currentMonsterEdit.ability_scores)
               {
-                console.log(currentMonsterEdit.ability_scores[ability]);
+                //console.log(currentMonsterEdit.ability_scores[ability]);
                 $('#ability-scores-' + ability).html(ability.charAt(0).toUpperCase() + ability.slice(1,3) + ': ' + currentMonsterEdit.ability_scores[ability]);
+                $('#ability-scores-' + ability + '-mod').html('Mod: ' + Math.floor((parseInt(currentMonsterEdit.ability_scores[ability]) - 10) / 2).toString());
+                $('#ability-scores-' + ability + '-mod').css('display', 'inline-block');
               }
             });
           });
@@ -249,7 +315,7 @@ $(document).ready(function(){
       let attr_type = $('#change_attrs').val(); //which attr
       let rv = change_attr(but_id, attr_type, attr_num);
       //send message to notify room of change
-      let msg = JSON.stringify({type: 'change_attr', attr: attr_type, dir: rv[1], 
+      let msg = JSON.stringify({type: 'change_attr', attr: attr_type, dir: rv[1],
       amt: rv[0], change: attr_num, lvl: rv[2]});
       socket.send(msg);
     });
@@ -269,7 +335,7 @@ $(document).ready(function(){
             } else {
               curr -= Number(num);
             }
-          raw_sheet[attr] = curr; //update in JSON 
+          raw_sheet[attr] = curr; //update in JSON
           // check if level up based on next xp
           let next_html = $('#next_xp').html();
           let next_xp = next_html.match(/\d+/g);
@@ -300,7 +366,7 @@ $(document).ready(function(){
           } else {
             curr -= Number(num);
           }
-          raw_sheet['ability-scores'][attr] = curr; //update in JSON 
+          raw_sheet['ability-scores'][attr] = curr; //update in JSON
           let new_mod = calc_mod(curr);
           let curr_mod = $('#' + attr + '_mod').html();
           curr_mod = curr_mod.replace(/\d+/g, new_mod);

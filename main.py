@@ -282,7 +282,7 @@ def get_player_stats(uname, isPlayer, room):
             text('~ Weapons ~')
           with tag('div', klass = 'col title', id='show_spell'):
             text('~ Spells ~ (click to view)')
-        with tag('div', id='shown', klass='pweps'): 
+        with tag('div', id='shown', klass='pweps'):
           with tag('div', klass = 'row'):
             with tag('div', klass = 'col wepfields'):
               text('Weapon')
@@ -417,49 +417,6 @@ def get_player_stats(uname, isPlayer, room):
     raw_resp = {
       'notes' : 'here are my notes we can just save this as plaintext maybe i will find a \nway to make a rich text editor so we can format \nthings better that would be cool.',
       'monsters' : {
-        'New Monster' : {
-          'size':'<input type=\'text\' name=\'size\' id=\'newMonsterTextField\'>',#size of monster
-          'type':'<input type=\'text\' name=\'type\' id=\'newMonsterTextField\'>',#idk if this is what its called
-          'alignment': '<input type=\'text\' name=\'alignment\' id=\'newMonsterTextField\'>',#for role playing
-          'ac': '<input type=\'text\' name=\'ac\' id=\'newMonsterTextField\'>',#armor class
-          'hp': '<input type=\'text\' name=\'hp\' id=\'newMonsterTextField\'>',#hit Points
-          'hit_dice': { #used to generate how many hit points a monster has
-            'number': '<input type=\'text\' name=\'number\' id=\'newMonsterTextField\'>', #number of dice
-            'value' : '<input type=\'text\' name=\'value\' id=\'newMonsterTextField\'>', #dice value (20 => d20 etc)
-          },
-          'speed': '<input type=\'text\' name=\'speed\' id=\'newMonsterTextField\'>', #walking speed of the monster will worry about the other kinds of speed a monster can have later
-          'ability_scores' : { #abillity scores of the monster
-            'str' : '<input type=\'text\' name=\'str\' id=\'newMonsterTextField\'>',
-            'dex' : '<input type=\'text\' name=\'dex\' id=\'newMonsterTextField\'>',
-            'const' : '<input type=\'text\' name=\'const\' id=\'newMonsterTextField\'>',
-            'intell': '<input type=\'text\' name=\'intell\' id=\'newMonsterTextField\'>',
-            'wis' : '<input type=\'text\' name=\'wis\' id=\'newMonsterTextField\'>',
-            'char' : '<input type=\'text\' name=\'char\' id=\'newMonsterTextField\'>'
-          },
-          'saving_throws' : { #bonuses to saving throws form : "+10", "+0", "-3", etc
-            'str' : '',
-            'dex' : '',
-            'const' : '',
-            'intell': '',
-            'wis' : '',
-            'char' : ''
-          },
-          'c_rating' : '0', #challenge rating of the monster (have to think about the proficency bonuses involved with challenge rating)
-          'skills' : [], #list of skills the monster has form: {'skill-name': '', 'ability': '', 'mod': ''}
-          'resistances' : [], #list of damage types the monster has a resistance to
-          'vulnerabilities' : [], #list of damage types the monster has a vulnerability to
-          'immunities' : [], #list of damage types the monster has an immunity to
-          'senses' : [], #list of senses and the radius of that sense that the monster has form {'sense': '', 'radius': ''}
-          'languages' : [], #languages the monster can speak form: {'language': '', 'speak': '', 'understand': ''}
-          'telepathy' : {'radius' : ''}, #if radius is non zero then the monster has telepathy probably will integrate into the language portion of the monster shee
-          'special_traits' : [], # special traits that are relevant to combat form: {'trait': '', 'notes' : ''}
-          'actions' : [], #a list of actions that the monster can perform the form of each action varies on the type of action
-          'reactions' : [], # a list of reactions a monster can have
-          'legendary_actions' : {
-            'num_action' : '',
-            'actions' : []
-          }
-        },
         'Aarakocra' : {
           'size':'Medium',#size of monster
           'type':'Humanoid (aarakocra)',#idk if this is what its called
@@ -690,19 +647,24 @@ def get_player_stats(uname, isPlayer, room):
         with tag('textarea', placeholder='Notes for campaign go here...', id='dmtextarea'):
           text(raw_resp['notes'])
       with tag('div', klass = 'col dmmonster', id='hidden'):
-        #with tag('div', klass = 'row'):
-          with tag('div', klass = 'col  col-md-4 dmmonsterlist'):
-            with tag('div', klass='row'):
-              with tag('div', klass='col'):
-                text('Monster List')
-            with tag('div', klass='row'):
-              with tag('div', klass='col no-border', id='mmonsterlist'):
-                for monster, monsterinfo in raw_resp['monsters'].items():
-                  with tag('div', klass = 'col'):
-                    text(monster)
-                    #dont need this now that we are storing the raw_sheet in js
-                    #with tag('div', klass='json'+monster['type'] ,id='hidden'):
-                      #text(str(monster))
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col-md-4'):
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col', id='newmonsterbtn'):
+                text('New Monster')
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col dmmonsterlist'):
+                with tag('div', klass='row'):
+                  with tag('div', klass='col'):
+                    text('Monster List')
+                with tag('div', klass='row'):
+                  with tag('div', klass='col no-border', id='mmonsterlist'):
+                    for monster, monsterinfo in raw_resp['monsters'].items():
+                      with tag('div', klass = 'col'):
+                        text(monster)
+                        #dont need this now that we are storing the raw_sheet in js
+                        #with tag('div', klass='json'+monster['type'] ,id='hidden'):
+                          #text(str(monster))
           with tag('div', klass = 'col no-border col-md-8 dmmonsteredit'):
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col col-md-7', id = 'monstername'):
@@ -713,40 +675,46 @@ def get_player_stats(uname, isPlayer, room):
               with tag('div', klass = 'col col-md-12', id = 'type'):
                 text('Type: ')
             with tag('div', klass = 'row row-no-gutters'):
+              with tag('div', klass = 'col col-md-4' , id='ac'):
+                text('AC: ')
+              with tag('div', klass = 'col col-md-4', id='health'):
+                text('Health: ')
+              with tag('div', klass = 'col col-md-4', id='hit_dice'):
+                text('Hit Dice: ')
+            with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col no-border col-md-6', id = 'ability-scores'):
                 text('Ability Scores')
                 with tag('div', klass = 'row'):
                   with tag('div', klass = 'col', id = 'ability-scores-str'):
                     text('Str: ')
+                  with tag('div', klass = 'col', id = 'ability-scores-str-mod'):
+                    text('Mod: ')
                 with tag('div', klass = 'row'):
                   with tag('div', klass = 'col', id = 'ability-scores-dex'):
                     text('Dex: ')
+                  with tag('div', klass = 'col', id = 'ability-scores-dex-mod'):
+                    text('Mod: ')
                 with tag('div', klass = 'row'):
                   with tag('div', klass = 'col', id = 'ability-scores-const'):
                     text('Con: ')
+                  with tag('div', klass = 'col', id = 'ability-scores-const-mod'):
+                    text('Mod: ')
                 with tag('div', klass = 'row'):
                   with tag('div', klass = 'col', id = 'ability-scores-intell'):
                     text('Int: ')
+                  with tag('div', klass = 'col', id = 'ability-scores-intell-mod'):
+                    text('Mod: ')
                 with tag('div', klass = 'row'):
                   with tag('div', klass = 'col', id = 'ability-scores-wis'):
                     text('Wis: ')
+                  with tag('div', klass = 'col', id = 'ability-scores-wis-mod'):
+                    text('Mod: ')
                 with tag('div', klass = 'row'):
                   with tag('div', klass = 'col', id = 'ability-scores-char'):
                     text('Cha: ')
-              with tag('div', klass = 'col no-border col-md-3'):
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col' , id='ac'):
-                    text('AC: ')
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id='speed'):
-                    text('Speed: ')
-              with tag('div', klass = 'col no-border col-md-3'):
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id='health'):
-                    text('Health: ')
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id='hit_dice'):
-                    text('Hit Dice: ')
+                  with tag('div', klass = 'col', id = 'ability-scores-char-mod'):
+                    text('Mod: ')
+
       #end dm edit
       with tag('div', klass = 'col dmencounter', id='hidden'):
         with tag('div', klass = 'col col-xs-4 col-sm-4 col-md-4 dmmonsterlist'):
@@ -804,8 +772,8 @@ def decide_request(req, uname, isPlayer, clients, room):
     lvl_up = ' Level Up!!!' if req['lvl'] else ''
     # keep same if not shortened version (should only be gems)
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
-    resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' + 
-    str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up, 
+    resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' +
+    str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up,
     'color': 'chocolate', 'type': 'status'}
   elif req_type == 'change_text':
     # someone has added to textual attribute
