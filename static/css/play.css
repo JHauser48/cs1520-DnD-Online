@@ -126,8 +126,12 @@ body{
   height: 100%;
 }
 
-#editMonsterTextField{
-  width: auto;
+#newMonsterTextField{
+  width: 100%;
+}
+
+#newMonsterHD{
+  width: 45%;
 }
 
 .dmencountercontent{
