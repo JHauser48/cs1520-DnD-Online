@@ -49,6 +49,7 @@ level_to_xp = {
   20: '355000'
 }
 
+# for both mods and figuring out attr changed
 mod_stats = {
   'none' : 'None',
   'str' : 'Strength',
@@ -57,6 +58,15 @@ mod_stats = {
   'intell' : 'Intelligence',
   'wis' : 'Wisdom',
   'char' : 'Charisma',
+  'hp': 'Hit Points',
+  'xp': 'Experience Points',
+  'hero': 'Heroics',
+  'curr_speed': 'Current Speed',
+  'pp': 'PP',
+  'gp': 'GP',
+  'ep': 'EP',
+  'sp': 'SP',
+  'cp': 'CP'
 }
 
 # helper to roll dice, takes dice type and adv/disadv attributes
@@ -76,7 +86,7 @@ def roll_dice(size, mod, mod_v, adv, dis, uname):
   return msg
 
 def modifier(mod_value):
-    return (int(mod_value)-10) // 2
+  return (int(mod_value)-10) // 2
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
 def add_client(clients, room, uname):
@@ -114,18 +124,14 @@ def get_player_stats(uname, isPlayer, room):
       'name': 'Mikey',
       'class': 'Necromancer',
       'race': 'Dark Elf',
-      'str': '74',
-      'str_mod': '2',
-      'dex': '56',
-      'dex_mod': '4',
-      'const': '22',
-      'const_mod': '0',
-      'intell': '65',
-      'intell_mod': '3',
-      'wis': '49',
-      'wis_mod': '1',
-      'char': '33',
-      'char_mod': '7',
+      'align': 'Chaotic Good',
+      'ability-scores':
+        {'str': '74',
+        'dex': '56',
+        'const': '22',
+        'intell': '65',
+        'wis': '49',
+        'char': '33'},
       'level': '8',
       'xp': '300',
       'languages':
@@ -138,12 +144,17 @@ def get_player_stats(uname, isPlayer, room):
         ['Breathe water', 'fire breath'],
       'armor': '29',
       'hp': '350',
-      'heroics': '15',
-      'weapons':
+      'hero': '15',
+      'weps':
         [{'name': 'Greatsword', 'to_hit': '22',
         'damage': '35', 'range': '12', 'notes': 'It sucks'},
         {'name': 'Holy Bow', 'to_hit': '45',
         'damage': '22', 'range': '65', 'notes': 'Will kill you'}],
+      'spells':
+        [{'name': 'Conjure Animals', 'level': '3nd', 'time': '1 Action', 'duration': 'Instantaneous',
+        'range': '90 ft', 'attack': 'Ranged', 'damage': 'Acid', 'components': 'V, S, M'},
+        {'name': 'Acid Arrow', 'level': '2nd', 'time': '1 Action', 'duration': '1 Hour',
+        'range': '60 ft', 'attack': 'None', 'damage': 'Summoning', 'components': 'V, S'}],
       'items':
         [{'name': 'special ring', 'weight': '8', 'notes': 'kills things'},
         {'name': 'old book', 'weight': '12', 'notes': 'eerie...'}],
@@ -176,6 +187,9 @@ def get_player_stats(uname, isPlayer, room):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='race'):
             text('Race: ' + raw_resp['race'])
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col namefields', id='align'):
+            text('Alignment: ' + raw_resp['align'])
       with tag('div', klass = 'col levelbox'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
@@ -205,37 +219,37 @@ def get_player_stats(uname, isPlayer, room):
       with tag('div', klass = 'col attrbox'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
-            text('~ Attributes ~')
+            text('~ Ability Scores ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col str', id='str'):
-            text(raw_resp['str'] + ' Strength')
+            text(raw_resp['ability-scores']['str'] + ' Strength')
           with tag('div', klass = 'col str', id='str_mod'):
-            text(raw_resp['str_mod'] + ' Modifier')
+            text(str(modifier(raw_resp['ability-scores']['str'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col dex', id='dex'):
-            text(raw_resp['dex'] + ' Dexterity')
+            text(raw_resp['ability-scores']['dex'] + ' Dexterity')
           with tag('div', klass = 'col str', id='dex_mod'):
-            text(raw_resp['dex_mod'] + ' Modifier')
+            text(str(modifier(raw_resp['ability-scores']['dex'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col const', id='const'):
-            text(raw_resp['const'] + ' Constitution')
+            text(raw_resp['ability-scores']['const'] + ' Constitution')
           with tag('div', klass = 'col str', id='const_mod'):
-            text(raw_resp['const_mod'] + ' Modifier')
+            text(str(modifier(raw_resp['ability-scores']['const'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col intell', id='intell'):
-            text(raw_resp['intell'] + ' Intelligence')
+            text(raw_resp['ability-scores']['intell'] + ' Intelligence')
           with tag('div', klass = 'col str', id='intell_mod'):
-            text(raw_resp['intell_mod'] + ' Modifier')
+            text(str(modifier(raw_resp['ability-scores']['intell'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col wis', id='wis'):
-            text(raw_resp['wis'] + ' Wisdom')
+            text(raw_resp['ability-scores']['wis'] + ' Wisdom')
           with tag('div', klass = 'col str', id='wis_mod'):
-            text(raw_resp['wis_mod'] + ' Modifier')
+            text(str(modifier(raw_resp['ability-scores']['wis'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col char', id='char'):
-            text(raw_resp['char'] + ' Charisma')
+            text(raw_resp['ability-scores']['char'] + ' Charisma')
           with tag('div', klass = 'col str', id='char_mod'):
-            text(raw_resp['char_mod'] + ' Modifier')
+            text(str(modifier(raw_resp['ability-scores']['char'])) + ' Modifier')
       with tag('div', klass = 'col statbox'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
@@ -247,36 +261,75 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col hp', id='hp'):
             text(raw_resp['hp'] + " Hit Points")
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col heroics', id='hero'):
-            text(raw_resp['heroics'] + " Heroics")
+          with tag('div', klass = 'col hero', id='hero'):
+            text(raw_resp['hero'] + " Heroics")
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col wepbox', id='weps'):
         with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title'):
+          with tag('div', klass = 'col title', id='show_wep'):
             text('~ Weapons ~')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col wepfields'):
-            text('Weapon')
-          with tag('div', klass = 'col wepfields'):
-            text('To Hit')
-          with tag('div', klass = 'col wepfields'):
-            text('Damage')
-          with tag('div', klass = 'col wepfields'):
-            text('Range')
-          with tag('div', klass = 'col wepfields'):
-            text('Notes')
-        for weapon in raw_resp['weapons']:
+          with tag('div', klass = 'col title', id='show_spell'):
+            text('~ Spells ~ (click to view)')
+        with tag('div', id='shown', klass='pweps'): 
           with tag('div', klass = 'row'):
             with tag('div', klass = 'col wepfields'):
-              text(weapon['name'])
+              text('Weapon')
             with tag('div', klass = 'col wepfields'):
-              text(weapon['to_hit'])
+              text('To Hit')
             with tag('div', klass = 'col wepfields'):
-              text(weapon['damage'])
+              text('Damage')
             with tag('div', klass = 'col wepfields'):
-              text(weapon['range'])
+              text('Range')
             with tag('div', klass = 'col wepfields'):
-              text(weapon['notes'])
+              text('Notes')
+          for weapon in raw_resp['weps']:
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col wepfields'):
+                text(weapon['name'])
+              with tag('div', klass = 'col wepfields'):
+                text(weapon['to_hit'])
+              with tag('div', klass = 'col wepfields'):
+                text(weapon['damage'])
+              with tag('div', klass = 'col wepfields'):
+                text(weapon['range'])
+              with tag('div', klass = 'col wepfields'):
+                text(weapon['notes'])
+        with tag('div', id='hidden', klass='pspells'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col spellfields'):
+              text('Level')
+            with tag('div', klass = 'col spellfields'):
+              text('Spell')
+            with tag('div', klass = 'col spellfields'):
+              text('Cast Time')
+            with tag('div', klass = 'col spellfields'):
+              text('Range/Area')
+            with tag('div', klass = 'col spellfields'):
+              text('Components')
+            with tag('div', klass = 'col spellfields'):
+              text('Duration')
+            with tag('div', klass = 'col spellfields'):
+              text('Attack/Save')
+            with tag('div', klass = 'col spellfields'):
+              text('Damage/Effect')
+          for spell in raw_resp['spells']:
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col spellfields'):
+                text(spell['level'])
+              with tag('div', klass = 'col spellfields'):
+                text(spell['name'])
+              with tag('div', klass = 'col spellfields'):
+                text(spell['time'])
+              with tag('div', klass = 'col spellfields'):
+                text(spell['range'])
+              with tag('div', klass = 'col spellfields'):
+                text(spell['components'])
+              with tag('div', klass = 'col spellfields'):
+                text(spell['duration'])
+              with tag('div', klass = 'col spellfields'):
+                text(spell['attack'])
+              with tag('div', klass = 'col spellfields'):
+                text(spell['damage'])
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col itembox'):
         with tag('div', klass = 'row'):
@@ -308,7 +361,7 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col itemfields'):
             text('Max Carry Weight: ')
           with tag('div', klass = 'col itemfields', id='max_weight'):
-            text(raw_resp['max_weight'])
+            text((int(raw_resp['ability-scores']['str']) * 15))
       with tag('div', klass = 'col treasbox'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
@@ -460,6 +513,16 @@ def decide_request(req, uname, isPlayer, clients, room):
         resp = {'msg': data, 'raw': jsonstr, 'type': 'sheet', 'l2x': level_to_xp}
     else:
         resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
+  elif req_type == 'change_attr':
+    print('making respons') # DEBUG
+    # someone changed a numeric attribute
+    direction = 'increased' if req['dir'] else 'decreased'
+    lvl_up = ' Level Up!!!' if req['lvl'] else ''
+    # keep same if not shortened version (should only be gems)
+    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
+    resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' + 
+    str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up, 
+    'color': 'chocolate', 'type': 'status'}
   return json.dumps(resp) # convert JSON to string
 
 

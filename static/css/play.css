@@ -3,7 +3,7 @@
 }
 
 #shown{
-	display: inline-block; /*idk if this is the right one*/
+	display: inherit; /*idk if this is the right one*/
 }
 #utilities{
 	display: inline-block;
@@ -89,8 +89,8 @@ body{
 
 #sheet{
     float: left;
-    background-color: rgba(56, 48, 9, 0.966);
-    color: rgba(163, 163, 163, 0.966);
+    background-color: rgba(26, 26, 23, 0.96);
+    color: rgba(230, 155, 171, 0.96);
     /*margin: -8% -12.875% 7% 3%;*/
     border-radius: 3px;
     border: 1px solid #DEDEDE;

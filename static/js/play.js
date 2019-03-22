@@ -27,6 +27,7 @@ $(document).ready(function(){
       socket.send(msg);
       msg = JSON.stringify({type: 'get_sheet'});
       socket.send(msg);
+      console.log("sent get_sheet"); //debug
     };
     
     //handle receipt of messages, behavior changes based on type
@@ -57,6 +58,32 @@ $(document).ready(function(){
             gem_html += `<option value="${gem_name}">${gem_name}</option>`
           }); 
           $('#change_attrs').append(gem_html);
+          //handle if user clicks spells, need to switch to spell view
+          $('#show_spell').click(function() {
+            // set weapons to hidden, spells to shown, change "click" text to other
+            // IF Not already shown
+            if ($('.pspells').attr('id') == 'hidden') {
+              $('.pweps').attr('id', 'hidden');
+              $('.pspells').attr('id', 'shown');
+              $('#show_wep').append(' (click to view)');
+              let curr_html = $('#show_spell').html();
+              curr_html = curr_html.replace(' (click to view)', '');
+              $('#show_spell').html(curr_html);
+            }
+          });
+          //handle if user clicks weps, need to switch to wep view
+          $('#show_wep').click(function() {
+            // set weapons to hidden, spells to shown, change "click" text to other
+            // IF not already shown
+            if ($('.pweps').attr('id') == 'hidden') {
+              $('.pspells').attr('id', 'hidden');
+              $('.pweps').attr('id', 'shown');
+              $('#show_spell').append(' (click to view)');
+              let curr_html = $('#show_wep').html();
+              curr_html = curr_html.replace(' (click to view)', '');
+              $('#show_wep').html(curr_html);
+            }
+          });
           break;
         case 'dmstuff':
           //server has sent the dm sheet
@@ -142,6 +169,7 @@ $(document).ready(function(){
     $('.btn.attr_amt').click(function(){
       let attr_field = $('#attr_num');
       let attr_num = attr_field.val(); //get number entered in
+      attr_field.val('');    //clear field
       //must be a non-negative number and not empty, output error otherwise
       if (!(/^\+?\d+$/.test(attr_num))) {
         attr_field[0].setCustomValidity('Value must be a non-negative integer');
@@ -151,7 +179,12 @@ $(document).ready(function(){
       attr_field[0].setCustomValidity('');
       let but_id = this.id; //which button (up_attr or down_attr)
       let attr_type = $('#change_attrs').val(); //which attr
-      change_attr(but_id, attr_type, attr_num);
+      let rv = change_attr(but_id, attr_type, attr_num);
+      //send message to notify room of change
+      let msg = JSON.stringify({type: 'change_attr', attr: attr_type, dir: rv[1], 
+      amt: rv[0], change: attr_num, lvl: rv[2]});
+      console.log(msg); //DEBUG
+      socket.send(msg);
     });
 
     //helper to change attribute based on params of client
@@ -159,26 +192,55 @@ $(document).ready(function(){
       // store if addition or subtraction
       let add_type = (but == 'up_attr') ? true : false;
       let curr, curr_html = 0;   //used for old values
+      let level_up = false;    //used in case of level up
       //switch based on attr type, most fall into major groups
       switch(attr){
         case 'xp':
+          curr = Number(raw_sheet[attr]); //retrieve current value
+            if (add_type){
+              curr += Number(num);
+            } else {
+              curr -= Number(num);
+            }
+          raw_sheet[attr] = curr; //update in JSON 
+          // check if level up based on next xp
+          let next_html = $('#next_xp').html();
+          let next_xp = next_html.match(/\d+/g);
+          if (curr >= Number(next_xp[0])) {
+            // time to level up
+            level_up = true;
+            let curr_level = Number(raw_sheet['level']);
+            curr_level += 1;
+            let lev_html = $('#level').html();
+            lev_html = lev_html.replace(/\d+/g, curr_level);
+            $('#level').html(lev_html);
+            raw_sheet['level'] = curr_level;
+            next_xp = l2x[curr_level + 1];
+            next_html = next_html.replace(/\d+/g, next_xp);
+            $('#next_xp').html(next_html);
+          }
+          break;
         case 'str':
-        case 'str_mod':
         case 'dex':
-        case 'dex_mod':
         case 'const':
-        case 'const_mod':
         case 'intell':
-        case 'intell_mod':
         case 'wis':
-        case 'wis_mod':
         case 'char':
-        case 'char_mod':
-        case 'armor':
+          //must recalculate modifier in these cases
+          curr = Number(raw_sheet['ability-scores'][attr]); //retrieve current value
+          if (add_type){
+            curr += Number(num);
+          } else {
+            curr -= Number(num);
+          }
+          raw_sheet['ability-scores'][attr] = curr; //update in JSON 
+          let new_mod = calc_mod(curr);
+          let curr_mod = $('#' + attr + '_mod').html();
+          curr_mod = curr_mod.replace(/\d+/g, new_mod);
+          $('#' + attr + '_mod').html(curr_mod);
+          break;
         case 'hp':
         case 'hero':
-        case 'max_weight':
-        case 'base_speed':
         case 'curr_speed':
           curr = Number(raw_sheet[attr]); //retrieve current value
           if (add_type){
@@ -226,8 +288,14 @@ $(document).ready(function(){
       //replace digits in HTML with new digits
       curr_html = curr_html.replace(/\d+/g, curr);
       $('#' + attr).html(curr_html); //set new HTML
+      return [curr, add_type, level_up]; //amount changed, type, if level up
     }
-  
+
+    //helper to calculate modifier for stat
+    function calc_mod(stat_val){
+      return Math.floor((Number(stat_val)-10) / 2)
+    }
+
     //handle if user chooses to leave the room
     $('#leave').click(function(){
       // send leaving message first with updated sheet, and then close the connection
