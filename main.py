@@ -350,31 +350,264 @@ def get_player_stats(uname, isPlayer, room):
             text("Current Speed: " + raw_resp['curr_speed'])
           with tag('div', klass = 'col condfields', id='cond'):
             text("Current Condition: " + raw_resp['condition'])
-                
+
   else:
     #fake response and probably wont have the same parameters as a real one
     raw_resp = {
       'notes' : 'here are my notes we can just save this as plaintext maybe i will find a \nway to make a rich text editor so we can format \nthings better that would be cool.',
-      'monsters' : [{
-        'type':'man',
-        'health':'50',
-        'armor class':'13',
-        'attack': '12',
-        'size':'biig'
-      },{
-        'type':'cat',
-        'health':'1000000',
-        'armor class':'1000000',
-        'attack': '1000000',
-        'size':'small'
-      }],
+      'monsters' : {
+        'New Monster' : {
+          'size':'<input type=\'text\' name=\'size\' id=\'newMonsterTextField\'>',#size of monster
+          'type':'<input type=\'text\' name=\'type\' id=\'newMonsterTextField\'>',#idk if this is what its called
+          'alignment': '<input type=\'text\' name=\'alignment\' id=\'newMonsterTextField\'>',#for role playing
+          'ac': '<input type=\'text\' name=\'ac\' id=\'newMonsterTextField\'>',#armor class
+          'hp': '<input type=\'text\' name=\'hp\' id=\'newMonsterTextField\'>',#hit Points
+          'hit_dice': { #used to generate how many hit points a monster has
+            'number': '<input type=\'text\' name=\'number\' id=\'newMonsterTextField\'>', #number of dice
+            'value' : '<input type=\'text\' name=\'value\' id=\'newMonsterTextField\'>', #dice value (20 => d20 etc)
+          },
+          'speed': '<input type=\'text\' name=\'speed\' id=\'newMonsterTextField\'>', #walking speed of the monster will worry about the other kinds of speed a monster can have later
+          'ability_scores' : { #abillity scores of the monster
+            'str' : '<input type=\'text\' name=\'str\' id=\'newMonsterTextField\'>',
+            'dex' : '<input type=\'text\' name=\'dex\' id=\'newMonsterTextField\'>',
+            'const' : '<input type=\'text\' name=\'const\' id=\'newMonsterTextField\'>',
+            'intell': '<input type=\'text\' name=\'intell\' id=\'newMonsterTextField\'>',
+            'wis' : '<input type=\'text\' name=\'wis\' id=\'newMonsterTextField\'>',
+            'char' : '<input type=\'text\' name=\'char\' id=\'newMonsterTextField\'>'
+          },
+          'saving_throws' : { #bonuses to saving throws form : "+10", "+0", "-3", etc
+            'str' : '',
+            'dex' : '',
+            'const' : '',
+            'intell': '',
+            'wis' : '',
+            'char' : ''
+          },
+          'c_rating' : '0', #challenge rating of the monster (have to think about the proficency bonuses involved with challenge rating)
+          'skills' : [], #list of skills the monster has form: {'skill-name': '', 'ability': '', 'mod': ''}
+          'resistances' : [], #list of damage types the monster has a resistance to
+          'vulnerabilities' : [], #list of damage types the monster has a vulnerability to
+          'immunities' : [], #list of damage types the monster has an immunity to
+          'senses' : [], #list of senses and the radius of that sense that the monster has form {'sense': '', 'radius': ''}
+          'languages' : [], #languages the monster can speak form: {'language': '', 'speak': '', 'understand': ''}
+          'telepathy' : {'radius' : ''}, #if radius is non zero then the monster has telepathy probably will integrate into the language portion of the monster shee
+          'special_traits' : [], # special traits that are relevant to combat form: {'trait': '', 'notes' : ''}
+          'actions' : [], #a list of actions that the monster can perform the form of each action varies on the type of action
+          'reactions' : [], # a list of reactions a monster can have
+          'legendary_actions' : {
+            'num_action' : '',
+            'actions' : []
+          }
+        },
+        'Aarakocra' : {
+          'size':'Medium',#size of monster
+          'type':'Humanoid (aarakocra)',#idk if this is what its called
+          'alignment': 'Neutral Good',#for role playing
+          'ac': '12',#armor class
+          'hp': '13',#hit Points
+          'hit_dice': { #used to generate how many hit points a monster has
+            'number': '3', #number of dice
+            'value' : '8', #dice value (20 => d20 etc)
+          },
+          'speed': '20ft', #walking speed of the monster will worry about the other kinds of speed a monster can have later
+          'ability_scores' : { #abillity scores of the monster
+            'str' : '10',
+            'dex' : '14',
+            'const' : '10',
+            'intell': '11',
+            'wis' : '12',
+            'char' : '11'
+          },
+          'saving_throws' : { #bonuses to saving throws form : "+10", "+0", "-3", etc
+            'str' : '',
+            'dex' : '',
+            'const' : '',
+            'intell': '',
+            'wis' : '',
+            'char' : ''
+          },
+          'c_rating' : '1/4', #challenge rating of the monster (have to think about the proficency bonuses involved with challenge rating)
+          'skills' : [{
+            'skill_name': 'Perception',
+            'ability' : 'wis',
+            'mod': '+5'
+          }], #list of skills the monster has form: {'skill-name': '', 'ability': '', 'mod': ''}
+          'resistances' : [], #list of damage types the monster has a resistance to
+          'vulnerabilities' : [], #list of damage types the monster has a vulnerability to
+          'immunities' : [], #list of damage types the monster has an immunity to
+          'senses' : [{
+            'sense' : 'passive perception',
+            'value' : '17'
+          }], #list of senses and the radius of that sense that the monster has form {'sense': '', 'radius': ''}
+          'languages' : [], #languages the monster can speak form: {'language': '', 'speak': '', 'understand': ''}
+          'telepathy' : {'radius' : ''}, #if radius is non zero then the monster has telepathy probably will integrate into the language portion of the monster shee
+          'special_traits' : [{
+            'trait' : 'Dive Attack',
+            'notes' : 'If the aarakocra is flying and dives at least 30 feet straight toward the target and then hits is with a melee weapon attack, the attack deal an extra 1d6 damage to the target'
+          }], # special traits that are relevant to combat form: {'trait': '', 'notes' : ''}
+          'actions' : [{
+            'action_type': 'weapon attack',
+            'name' : 'Talon',
+            'type' : 'melee',
+            'reach' : '5ft',
+            'min_range': '',
+            'max_range': '',
+            'hit_mod': '+4',
+            'damage' : {
+              'type' : 'slashing',
+              'number' : '1',
+              'value' : '4',
+              'mod' : 'dex'
+            },
+            'notes' : ''
+          },{
+            'action-type': 'weapon attack',
+            'name' : 'Javelin',
+            'type' : 'melee/ranged',
+            'reach' : '5ft',
+            'min_range': '30ft',
+            'max_range': '120ft',
+            'hit-mod': '+4',
+            'damage' : {
+              'type' : 'piercing',
+              'number' : '1',
+              'value' : '6',
+              'mod' : 'dex'
+            },
+            'notes' : ''
+          }], #a list of actions that the monster can perform the form of each action varies on the type of action
+          'reactions' : [], # a list of reactions a monster can have
+          'legendary_actions' : {
+            'num_action' : '',
+            'actions' : []
+          }
+        },
+        'Goristro' : {
+          'size':'Huge',#size of monster
+          'type':'Fiend (Demon)',#idk if this is what its called
+          'alignment': 'Chaotic Evil',#for role playing
+          'ac': '19',#armor class
+          'hp': '310',#hit Points
+          'hit_dice': { #used to generate how many hit points a monster has
+            'number': '23', #number of dice
+            'value' : '12' #dice value (20 => d20 etc)
+          },
+          'speed': '40ft', #walking speed of the monster will worry about the other kinds of speed a monster can have later
+          'ability_scores' : { #abillity scores of the monster
+            'str' : '25',
+            'dex' : '11',
+            'const' : '25',
+            'intell': '6',
+            'wis' : '13',
+            'char' : '14'
+          },
+          'saving_throws' : { #bonuses to saving throws form : "+10", "+0", "-3", etc
+            'str' : '+13',
+            'dex' : '+6',
+            'const' : '+13',
+            'intell': '',
+            'wis' : '+7',
+            'char' : ''
+          },
+          'c-rating' : '17', #challenge rating of the monster (have to think about the proficency bonuses involved with challenge rating)
+          'skills' : [{
+            'skill_name': 'Perception',
+            'ability' : 'wis',
+            'mod': '+7'
+          }], #list of skills the monster has form: {'skill-name': '', 'ability': '', 'mod': ''}
+          'resistances' : ['cold', 'fire', 'lightning', 'bludgeoning', 'piercing', 'slashing'], #list of damage types the monster has a resistance to
+          'vulnerabilities' : [], #list of damage types the monster has a vulnerability to
+          'immunities' : ['poison'], #list of damage types the monster has an immunity to
+          'senses' : [{
+            'sense' : 'darkvision',
+            'value' : '120ft'
+          },{
+            'sense' : 'passive perception',
+            'value': '17'
+          }], #list of senses and the value of that sense that the monster has form {'sense': '', 'value': ''}
+          'languages' : [{
+            'language':'Abyssal',
+            'speak' : 'true',
+            'understand' : 'true'
+          }], #languages the monster can speak form: {'language': '', 'speak': '', 'understand': ''}
+          'telepathy' : {'radius' : ''}, #if radius is non zero then the monster has telepathy probably will integrate into the language portion of the monster shee
+          'special_traits' : [{
+            'trait' : 'Charge',
+            'notes' : 'If the goristro moves at least 15 feet straight toward a target and then hits it with a gore attack on the same turn, the target takes an extra 7d10 piercing damage. If the target is a creature, it must succeed on a DC 21 Strength saving throw or be pushed up to 20 feet away and knocked prone.'
+          },{
+            'trait' : 'Labyrinthine Recall',
+            'notes' : 'The goristro can perfectly recall any path it has traveled.'
+          },{
+            'trait' : 'Magic Resistence',
+            'notes' : 'The goristro has advantage on saving throws against spells and other magical effects.'
+          },{
+            'trait' : 'Siege Monster',
+            'notes' : 'The goristro deals double damage to objects and structures.'
+          }], # special traits that are relevant to combat form: {'trait': '', 'notes' : ''}
+          'actions' : [{
+            'action_type' : 'other',
+            'name' : 'Multiattack',
+            'notes' : 'The goristro makes three attacks: two with its fists and one with its hoof.'
+          },{
+            'action_type': 'weapon attack',
+            'name' : 'Fist',
+            'type' : 'melee',
+            'reach' : '10ft',
+            'min_range': '',
+            'max_range': '',
+            'hit_mod': '+13',
+            'damage' : {
+              'type' : 'bludgeoning',
+              'number' : '3',
+              'value' : '8',
+              'mod' : 'str'
+            },
+            'notes' : ''
+          },{
+            'action_type': 'weapon attack',
+            'name' : 'Hoof',
+            'type' : 'melee',
+            'reach' : '5ft',
+            'min_range': '',
+            'max_range': '',
+            'hit_mod': '+13',
+            'damage' : {
+              'type' : 'bludgeoning',
+              'number' : '3',
+              'value' : '10',
+              'mod' : 'str'
+            },
+            'notes' : 'If the target is a creature, it must succeed on a DC 21 Strength saving throw or be knocked prone.'
+          },{
+            'action_type': 'weapon attack',
+            'name' : 'Gore',
+            'type' : 'melee',
+            'reach' : '10ft',
+            'min_range': '',
+            'max_range': '',
+            'hit_mod': '+13',
+            'damage' : {
+              'type' : 'piercing',
+              'number' : '7',
+              'value' : '10',
+              'mod' : 'str'
+            },
+            'notes' : ''
+          }], #a list of actions that the monster can perform the form of each action varies on the type of action
+          'reactions' : [], # a list of reactions a monster can have
+          'legendary_actions' : {
+            'num_action' : '',
+            'actions' : []
+          }
+        }
+      },
       'encounter' : {
         'monsters':[{
           'name' : 'Big man',
-          'type' : 'man'
+          'type' : 'Goristro'
         },{
-          'name' : 'Krusty Louis',
-          'type' : 'cat'
+          'name' : 'bird man',
+          'type' : 'Aarakocra'
         }],
         'turnorder':[]
       }
@@ -396,21 +629,64 @@ def get_player_stats(uname, isPlayer, room):
         with tag('textarea', placeholder='Notes for campaign go here...', id='dmtextarea'):
           text(raw_resp['notes'])
       with tag('div', klass = 'col dmmonster', id='hidden'):
-        with tag('div', klass = 'col col-xs-4 col-sm-4 col-md-4 dmmonsterlist'):
-          with tag('div', klass='row'):
-            with tag('div', klass='col'):
-              text('Monster List')
-          with tag('div', klass='row'):
-            with tag('div', klass='col', id='mmonsterlist'):
-              for monster in raw_resp['monsters']:
-                with tag('div', klass = 'col'):
-                  text(monster['type'])
-                  with tag('div', klass='json'+monster['type'] ,id='hidden'):
-                    text(str(monster))
-        with tag('div', klass = 'col col-xs-8 col-sm-8 col-md-8 dmmonsteredit'):
-          with tag('div', klass = 'row'):
-            with tag('div', klass = 'col', id='monsteredit'):
-              text('Edit monsters here.')
+        #with tag('div', klass = 'row'):
+          with tag('div', klass = 'col  col-md-4 dmmonsterlist'):
+            with tag('div', klass='row'):
+              with tag('div', klass='col'):
+                text('Monster List')
+            with tag('div', klass='row'):
+              with tag('div', klass='col no-border', id='mmonsterlist'):
+                for monster, monsterinfo in raw_resp['monsters'].items():
+                  with tag('div', klass = 'col'):
+                    text(monster)
+                    #dont need this now that we are storing the raw_sheet in js
+                    #with tag('div', klass='json'+monster['type'] ,id='hidden'):
+                      #text(str(monster))
+          with tag('div', klass = 'col no-border col-md-8 dmmonsteredit'):
+            with tag('div', klass = 'row row-no-gutters'):
+              with tag('div', klass = 'col col-md-7', id = 'monstername'):
+                text('Monster Name')
+              with tag('div', klass = 'col col-md-5', id = 'size'):
+                text('Size: ')
+            with tag('div', klass = 'row row-no-gutters'):
+              with tag('div', klass = 'col col-md-12', id = 'type'):
+                text('Type: ')
+            with tag('div', klass = 'row row-no-gutters'):
+              with tag('div', klass = 'col no-border col-md-6', id = 'ability-scores'):
+                text('Ability Scores')
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id = 'ability-scores-str'):
+                    text('Str: ')
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id = 'ability-scores-dex'):
+                    text('Dex: ')
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id = 'ability-scores-const'):
+                    text('Con: ')
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id = 'ability-scores-intell'):
+                    text('Int: ')
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id = 'ability-scores-wis'):
+                    text('Wis: ')
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id = 'ability-scores-char'):
+                    text('Cha: ')
+              with tag('div', klass = 'col no-border col-md-3'):
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col' , id='ac'):
+                    text('AC: ')
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id='speed'):
+                    text('Speed: ')
+              with tag('div', klass = 'col no-border col-md-3'):
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id='health'):
+                    text('Health: ')
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col', id='hit_dice'):
+                    text('Hit Dice: ')
+      #end dm edit
       with tag('div', klass = 'col dmencounter', id='hidden'):
         with tag('div', klass = 'col col-xs-4 col-sm-4 col-md-4 dmmonsterlist'):
           with tag('div', klass='row'):
@@ -418,17 +694,18 @@ def get_player_stats(uname, isPlayer, room):
               text('Monster List')
           with tag('div', klass='row'):
             with tag('div', klass='col', id='emonsterlist'):
-              for monster in raw_resp['monsters']:
+              for monster, monsterinfo in raw_resp['monsters'].items():
                 with tag('div', klass = 'col'):
-                  text(monster['type'])
-                  with tag('div', klass='json'+monster['type'], id='hidden'):
-                    text(str(monster))
+                  text(monster)
+                  #dont need this now that we are storing the raw_sheet in js
+                  #with tag('div', klass='json'+monster['type'] ,id='hidden'):
+                    #text(str(monster))
         with tag('div', klass = 'col-xs-8 col-sm-8 col-md-8 dmencountercontent'):
           with tag('div', klass = 'col dmturnorder'):
             text('turn order stuff here')
           with tag('div', klass = 'col', id='dmmonsterinfo'):
             text('specific enemy info here')
-  
+
   resp = doc.getvalue()
   return raw_resp, resp # return both JSON and HTML for sending to JS
 
@@ -532,14 +809,14 @@ def add_header(resp):
 
 @app.route('/create', methods=['POST'])
 def create_account():
-     
+
     user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
     auth.send_email_verification(user['idToken'])
     newData = {"username": request.form['username'], "email": request.form['email']}
     db.child('user').push(newData)
 
     return redirect('/static/login.html', code=302)
-    
+
 
 
 if __name__ == '__main__':

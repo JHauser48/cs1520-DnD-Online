@@ -1,5 +1,7 @@
 var socket;
 var uname;
+var roomname;
+var isPlayer;
 console.log("before doc");
 $(document).ready(function(){
     console.log("doc loaded");
@@ -13,9 +15,13 @@ $(document).ready(function(){
     var scheme = window.location.protocol == "https:" ? 'wss://' : 'ws://';
     var socket_uri = scheme + window.location.hostname + ':' + location.port + '/play';
     socket = new WebSocket(socket_uri);         //create socket for URI
-    var sheet = $('#sheet');        //save sheet element for adding in sheet/DM info
+    var sheet = isPlayer ? $('#sheet') : $('#dmstuff'); //save sheet element for adding in sheet/DM info
     var raw_sheet; //JSON version of sheet, use for updates during session, send back to server at end for updating in DB
     var l2x;      //used for players that need xp for next level, map level to needed XP
+
+    //DM variables
+    var currentMonsterEdit; //the monster that is currently being edited
+    var currentMonsterTurn; //the monster whose turn it is
 
     // begin event handlers for socket
     //when new connection opened, should send type: enter
@@ -28,7 +34,7 @@ $(document).ready(function(){
       msg = JSON.stringify({type: 'get_sheet'});
       socket.send(msg);
     };
-    
+
     //handle receipt of messages, behavior changes based on type
     socket.onmessage = function(msg){
       data = JSON.parse(msg.data); //convert to JS object
@@ -55,12 +61,12 @@ $(document).ready(function(){
           raw_sheet.treasures.gems.forEach((gem) => {
             let gem_name = gem.name
             gem_html += `<option value="${gem_name}">${gem_name}</option>`
-          }); 
+          });
           $('#change_attrs').append(gem_html);
           break;
         case 'dmstuff':
           //server has sent the dm sheet
-          $('#dmstuff').html(data.msg);   //add sheet to HTML
+          sheet.html(data.msg);   //add sheet to HTML
           raw_sheet = data.raw; //store JSON
           //get all the content divs for easy access later
           arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];
@@ -89,8 +95,20 @@ $(document).ready(function(){
             //the next div is the one with the json in it
             //var monsterjson = JSON.parse($(this).children().html());
             $(this).click(function(){
-              console.log('Clicked');
-              $('#monsteredit').html($(this).children().html());
+              currentMonsterEdit = raw_sheet.monsters[$(this).html()];
+              $('#monstername').html('Name: ' + $(this).html());
+              $('#type').html('Type: ' + currentMonsterEdit.type);
+              $('#size').html('Size: ' + currentMonsterEdit.size);
+              $('#ac').html('AC: ' + currentMonsterEdit.ac);
+              $('#speed').html('Speed: ' + currentMonsterEdit.speed);
+              $('#health').html('Health: ' + currentMonsterEdit.hp);
+              $('#hit_dice').html('Hit Dice: ' + currentMonsterEdit.hit_dice.number + 'd' + currentMonsterEdit.hit_dice.value);
+              console.log(currentMonsterEdit);
+              for(ability in currentMonsterEdit.ability_scores)
+              {
+                console.log(currentMonsterEdit.ability_scores[ability]);
+                $('#ability-scores-' + ability).html(ability.charAt(0).toUpperCase() + ability.slice(1,3) + ': ' + currentMonsterEdit.ability_scores[ability]);
+              }
             });
           });
           //get monster divs from monster list in the encounter div
@@ -98,8 +116,8 @@ $(document).ready(function(){
             //the next div is the one with the json in it
             //var monsterjson = JSON.parse($(this).children().html());
             $(this).click(function(){
-              console.log('Clicked');
-              $('#dmmonsterinfo').html($(this).children().html());
+              console.log($(this).html());
+              //$('#dmmonsterinfo').html($(this).html());
             });
           });
           break;
@@ -186,7 +204,7 @@ $(document).ready(function(){
           } else {
             curr -= Number(num);
           }
-          raw_sheet[attr] = curr; //update in JSON 
+          raw_sheet[attr] = curr; //update in JSON
           break;
         case 'pp':
         case 'gp':
@@ -199,7 +217,7 @@ $(document).ready(function(){
           } else {
             curr -= Number(num);
           }
-          raw_sheet['treasures'][attr] = curr; 
+          raw_sheet['treasures'][attr] = curr;
           break;
         default:
           // only attrs in default should be gems
@@ -227,7 +245,7 @@ $(document).ready(function(){
       curr_html = curr_html.replace(/\d+/g, curr);
       $('#' + attr).html(curr_html); //set new HTML
     }
-  
+
     //handle if user chooses to leave the room
     $('#leave').click(function(){
       // send leaving message first with updated sheet, and then close the connection
