@@ -64,6 +64,8 @@ $(document).ready(function(){
             gem_html += `<option value="${gem_name}">${gem_name}</option>`
           });
           $('#change_attrs').append(gem_html);
+
+          // --- BEGIN HANDLERS FOR PSHEET ELEMENTS ---
           //handle if user clicks spells, need to switch to spell view
           $('#show_spell').click(function() {
             // set weapons to hidden, spells to shown, change "click" text to other
@@ -89,6 +91,54 @@ $(document).ready(function(){
               curr_html = curr_html.replace(' (click to view)', '');
               $('#show_wep').html(curr_html);
             }
+          });
+
+          //handle if user wants to add text in comma sep vals
+          $('.btn.add_text.add_com').click(function() {
+            //insert text box for entering in new value
+            let but_id = this;    //where are we adding?
+            //form new ids for input based on button clicked
+            let in_id = this.id + "_input";
+            let sub_id = this.id + "_sub";
+            //first check if an input has already been created, if so, output error
+            //should submit that one first
+            if ($('#' + in_id).length) {
+              let in_field = $('#' + in_id);
+              in_field[0].setCustomValidity('Must submit before creating new');
+              in_field[0].reportValidity();
+              return;
+            }
+            $(but_id).before(`<input class="in add_text add_com" id=${in_id}` +
+            ` placeholder="Enter new element..."><button class = "btn add_text sub_com"
+            id=${sub_id}>Submit</button>`);
+            //register handler for newly created field + button if a add on is submitted
+            $('#' + sub_id).click(function() {
+              let in_id = this.id.replace('sub', 'input') ;
+              let in_field = $('#' + in_id).val();
+              //must be non empty
+              if (in_field.length == 0) {
+                $('#' + in_id)[0].setCustomValidity("Input must not be empty");
+                $('#' + in_id)[0].reportValidity();
+                return;
+              }
+              $('#' + in_id)[0].setCustomValidity("");
+              $('#' + in_id).val(''); //clear
+              //closest div up in hierarchy will be where to add text
+              let parent = $('#' + in_id).closest('div');
+              //remove unneeded fields
+              $('#' + sub_id).remove();
+              $('#' + in_id).remove();
+              //find button in div to where to add text before
+              let but_child = parent.children('button');
+              //must add to HTML and JSON
+              $(but_child).before(', ' + in_field);
+              let j_key = get_key(parent[0].id);
+              raw_sheet[j_key].push(in_field);
+              console.log(raw_sheet);     //DEBUG
+              //now send message indicating change    
+              let msg = JSON.stringify({type: 'change_text', attr: j_key, change: in_field});
+              socket.send(msg);    
+            });
           });
           break;
         case 'dmstuff':
@@ -187,7 +237,6 @@ $(document).ready(function(){
     $('.btn.attr_amt').click(function(){
       let attr_field = $('#attr_num');
       let attr_num = attr_field.val(); //get number entered in
-      attr_field.val('');    //clear field
       //must be a non-negative number and not empty, output error otherwise
       if (!(/^\+?\d+$/.test(attr_num))) {
         attr_field[0].setCustomValidity('Value must be a non-negative integer');
@@ -195,13 +244,13 @@ $(document).ready(function(){
         return;
       }
       attr_field[0].setCustomValidity('');
+      attr_field.val('');    //clear field
       let but_id = this.id; //which button (up_attr or down_attr)
       let attr_type = $('#change_attrs').val(); //which attr
       let rv = change_attr(but_id, attr_type, attr_num);
       //send message to notify room of change
       let msg = JSON.stringify({type: 'change_attr', attr: attr_type, dir: rv[1], 
       amt: rv[0], change: attr_num, lvl: rv[2]});
-      console.log(msg); //DEBUG
       socket.send(msg);
     });
 
@@ -312,6 +361,26 @@ $(document).ready(function(){
     //helper to calculate modifier for stat
     function calc_mod(stat_val){
       return Math.floor((Number(stat_val)-10) / 2)
+    }
+
+    //helper to get JSON key based on where text added
+    function get_key(field_id) {
+      let key = '';
+      switch(field_id) {
+        case 'langs':
+          key = 'languages';
+          break;
+        case 'condenhan':
+          key = 'enhan';
+          break;
+        case 'resist':
+          key = 'resist';
+          break;
+        case 'specs':
+          key = 'special';
+          break;
+      }
+      return key;
     }
 
     //handle if user chooses to leave the room

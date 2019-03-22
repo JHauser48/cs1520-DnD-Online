@@ -70,7 +70,11 @@ mod_stats = {
   'gp': 'GP',
   'ep': 'EP',
   'sp': 'SP',
-  'cp': 'CP'
+  'cp': 'CP',
+  'languages': 'Languages',
+  'enhan': 'Conditions & Enchantments',
+  'resist': 'Resistances',
+  'special': 'Special Skills & Abilities'
 }
 
 # helper to roll dice, takes dice type and adv/disadv attributes
@@ -155,7 +159,7 @@ def get_player_stats(uname, isPlayer, room):
         {'name': 'Holy Bow', 'to_hit': '45',
         'damage': '22', 'range': '65', 'notes': 'Will kill you'}],
       'spells':
-        [{'name': 'Conjure Animals', 'level': '3nd', 'time': '1 Action', 'duration': 'Instantaneous',
+        [{'name': 'Conjure Animals', 'level': '3rd', 'time': '1 Action', 'duration': 'Instantaneous',
         'range': '90 ft', 'attack': 'Ranged', 'damage': 'Acid', 'components': 'V, S, M'},
         {'name': 'Acid Arrow', 'level': '2nd', 'time': '1 Action', 'duration': '1 Hour',
         'range': '60 ft', 'attack': 'None', 'damage': 'Summoning', 'components': 'V, S'}],
@@ -173,7 +177,7 @@ def get_player_stats(uname, isPlayer, room):
           {'name': 'sapphires', 'num': '3'}]}
     }
     # use dict to build HTML using library
-    doc, tag, text = Doc().tagtext()
+    doc, tag, text= Doc().tagtext()
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col title'):
         text('~ Player Sheet ~')
@@ -210,15 +214,19 @@ def get_player_stats(uname, isPlayer, room):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='langs'):
             text('Languages: ' + (', ').join(raw_resp['languages']))
+            doc.asis('<button class="btn add_text add_com" id="add_lang">Add</button>')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='condenhan'):
-            text('Conditions + Enchancements: ' + (', ').join(raw_resp['enhan']))
+            text('Conditions & Enchantments: ' + (', ').join(raw_resp['enhan']))
+            doc.asis('<button class="btn add_text add_com" id="add_cond">Add</button>')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='resist'):
             text('Resistances: ' + (', ').join(raw_resp['resist']))
+            doc.asis('<button class="btn add_text add_com" id="add_resist">Add</button>')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='specs'):
-            text('Special Skills + Abilities: ' + (', ').join(raw_resp['special']))
+            text('Special Skills & Abilities: ' + (', ').join(raw_resp['special']))
+            doc.asis('<button class="btn add_text add_com" id="add_spec">Add</button>')
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col attrbox'):
         with tag('div', klass = 'row'):
@@ -307,15 +315,11 @@ def get_player_stats(uname, isPlayer, room):
             with tag('div', klass = 'col spellfields'):
               text('Cast Time')
             with tag('div', klass = 'col spellfields'):
-              text('Range/Area')
+              text('Range')
             with tag('div', klass = 'col spellfields'):
-              text('Components')
+              text('Components + Duration')
             with tag('div', klass = 'col spellfields'):
-              text('Duration')
-            with tag('div', klass = 'col spellfields'):
-              text('Attack/Save')
-            with tag('div', klass = 'col spellfields'):
-              text('Damage/Effect')
+              text('Attack/Save + Effect')
           for spell in raw_resp['spells']:
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col spellfields'):
@@ -327,12 +331,12 @@ def get_player_stats(uname, isPlayer, room):
               with tag('div', klass = 'col spellfields'):
                 text(spell['range'])
               with tag('div', klass = 'col spellfields'):
-                text(spell['components'])
-              with tag('div', klass = 'col spellfields'):
+                text(spell['components'] + ';')
+                doc.stag('br')
                 text(spell['duration'])
               with tag('div', klass = 'col spellfields'):
-                text(spell['attack'])
-              with tag('div', klass = 'col spellfields'):
+                text(spell['attack'] + ';')
+                doc.stag('br')
                 text(spell['damage'])
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col itembox'):
@@ -802,6 +806,11 @@ def decide_request(req, uname, isPlayer, clients, room):
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
     resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' + 
     str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up, 
+    'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'change_text':
+    # someone has added to textual attribute
+    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
+    resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.', 
     'color': 'chocolate', 'type': 'status'}
   return json.dumps(resp) # convert JSON to string
 
