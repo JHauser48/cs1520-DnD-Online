@@ -92,6 +92,7 @@ body{
     background-color: rgba(26, 26, 23, 0.96);
     color: rgba(230, 155, 171, 0.96);
     /*margin: -8% -12.875% 7% 3%;*/
+    width: 50%;
     border-radius: 3px;
     border: 1px solid #DEDEDE;
     font-family: 'MedievalSharp';
@@ -101,7 +102,7 @@ body{
     float: left;
     background-color: rgba(56, 48, 9, 0.966);
     color: rgba(163, 163, 163, 0.966);
-    /*margin: -8% -12.875% 7% 3%;*/
+    width: 50%;
     border-radius: 3px;
     border: 1px solid #DEDEDE;
     font-family: 'MedievalSharp';
@@ -117,24 +118,39 @@ body{
 
 .dmmonsterlist{
   display: inline-block;
+  height: 100%;
 }
 
 .dmmonsteredit{
   display: inline-block;
+  height: 100%;
+}
+
+#editMonsterTextField{
+  width: auto;
 }
 
 .dmencountercontent{
   display: inline-block;
+  height: 100%;
 }
 
 .col {
     background-color: rgba(0,0,0,0.1);
     border-radius: 3px;
     border: 1px solid #dedede;
-    width: auto;
-    padding: 10px;
-    margin: 5px;
+    width: 100%;
+    display: inline-block;
+    padding: auto;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
+
+.no-border {
+  border: none;
+}
 
 .title {
     text-align: center;
