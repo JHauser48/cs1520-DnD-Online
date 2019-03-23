@@ -250,8 +250,6 @@ $(document).ready(function(){
 
            //handle if user wants to add table entry (i.e. weapons, spells, items)
            $('.btn.add_text.add_table').click(function() {
-            let but_id = this;    //where are we adding?
-            let sub_id = this.id + "_sub";
             add_item(this.id);      //employ helper to deal with html
            });
           break;
@@ -633,6 +631,10 @@ $(document).ready(function(){
             let parent = this.closest('.row');   //start nearest row, remove all children
             $(parent).children().remove();
             $(parent).remove();
+            //now just send a socket message indicating adding an item
+            item_type = "Items";
+            let msg = JSON.stringify({type: 'add_item', name: item_name, it_type: item_type});
+            socket.send(msg);
           });
           break;
       }
