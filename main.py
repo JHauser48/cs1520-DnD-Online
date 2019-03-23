@@ -166,7 +166,6 @@ def get_player_stats(uname, isPlayer, room):
       'items':
         [{'name': 'special ring', 'weight': '8', 'notes': 'kills things'},
         {'name': 'old book', 'weight': '12', 'notes': 'eerie...'}],
-      'max_weight': '100',
       'base_speed': '30',
       'curr_speed': '50',
       'condition': 'fair',
@@ -306,6 +305,10 @@ def get_player_stats(uname, isPlayer, room):
                 text(weapon['range'])
               with tag('div', klass = 'col wepfields'):
                 text(weapon['notes'])
+          with tag('div', klass = 'row', id="wep_but"):
+            # use element above to insert new weps
+            with tag('div', klass = 'col wepfields title'):
+              doc.asis('<button class="btn add_text add_table" id="add_wep">Add</button>')
         with tag('div', id='hidden', klass='pspells'):
           with tag('div', klass = 'row'):
             with tag('div', klass = 'col spellfields'):
@@ -338,6 +341,10 @@ def get_player_stats(uname, isPlayer, room):
                 text(spell['attack'] + ';')
                 doc.stag('br')
                 text(spell['damage'])
+          with tag('div', klass = 'row', id="spell_but"):
+            # use element above to insert new spells
+            with tag('div', klass = 'col spellfields title'):
+                doc.asis('<button class="btn add_text add_table" id="add_spell">Add</button>')
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col itembox'):
         with tag('div', klass = 'row'):
@@ -358,8 +365,10 @@ def get_player_stats(uname, isPlayer, room):
               text(item['weight'])
             with tag('div', klass = 'col itemfields'):
               text(item['notes'])
-        with tag('div', id='items'):
-          text() # placeholder in case of new items
+        with tag('div', klass = 'row', id="item_but"):
+          # use element above to insert new items
+          with tag('div', klass = 'col itemfields title'):
+            doc.asis('<button class="btn add_text add_table" id="add_item">Add</button>')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col itemfields'):
             text('Total Weight Carried: ')
@@ -399,6 +408,10 @@ def get_player_stats(uname, isPlayer, room):
               with tag('div', klass ='row'):
                 with tag('div', klass = 'col treasfields', id=gem['name']):
                   text(gem['name'] + ": " + gem['num'])
+            with tag('div', klass = 'row', id="gem_but"):
+              # use element above to insert new gems
+              with tag('div', klass = 'col treasfields title'):
+                doc.asis('<button class="btn add_text new_gem" id="add_gem">Add</button>')
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col condbox'):
         with tag('div', klass = 'row'):
@@ -780,6 +793,14 @@ def decide_request(req, uname, isPlayer, clients, room):
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
     resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.', 
     'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'add_gem':
+    # someone has added new gems
+    resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) + 
+    ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'add_item':
+    # someone added either weapon, item, or spell
+    resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
+    '.', 'color': 'chocolate', 'type': 'status'}
   return json.dumps(resp) # convert JSON to string
 
 

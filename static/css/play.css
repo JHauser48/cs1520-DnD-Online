@@ -203,6 +203,14 @@ input[type="radio"]{
   margin-left: 5px;
 }
 
+.in.add_text.add_gem {
+  width: 70%;
+}
+
+.in.add_text.add_table {
+  width: 100%;
+}
+
 .footer {
     position: fixed;
     height: 50px;
