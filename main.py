@@ -119,9 +119,6 @@ align_abbrev = {
   'ce': 'Chaotic Evil'
 }
 
-#class PlayerStats(db.Model):
-  #__tablename__ = 'pstats'
-
 # helper to roll dice, takes dice type and adv/disadv attributes
 def roll_dice(size, mod, mod_v, adv, dis, uname):
   mod_val = modifier(mod_v)
@@ -168,6 +165,172 @@ def remove_client(uname, room):
     r_to_client[room].remove(to_rem)
   if to_rem in last_client:
     last_client.remove(to_rem)  # client gone
+
+# helper to determine what type of request based on header, form response
+def decide_request(req, uname, isPlayer, clients, room):
+  resp = ""
+  req_type = req['type']
+  if req_type == 'enter':
+    # person has joined room, must take difference of new clients list and old
+    # use to track person in room
+    add_client(clients, room, uname)
+    resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status'}
+  elif req_type == 'text':
+    # someone is sending a message
+    resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
+  elif req_type == 'dice_roll':
+    # someone is asking for dice rolls
+    msg = roll_dice(int(req['dice_type']),req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname)
+    resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
+  elif req_type == 'leave':
+    # someone leaving the room, remove from room client list to avoid issues, print status
+    # also need to update sheet for leaving user, key = UID + title
+    title = req['msg']['sheet_title']
+    uid = uname
+    mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, 
+    req['msg'])
+    remove_client(uname, room)
+    resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
+  elif req_type == 'get_sheet':
+    # client asking for psheet OR DM info, depending on type, send requested info
+    # include both formatted HTML and raw JSON
+    # can be either grabbing from db or forming based on raw JSON
+    if 'title' in req.keys():
+      # title indicates retrieving from db, use UID as key
+      print('shouldnt be here lol')
+    else:
+      # raw JSON of sheet sent in message, store in db using UID as key
+      raw_sheet = req['msg']
+      raw_sheet['uid'] = session['u_token'] # add name as key for retrieving document
+      mongo.db['psheets'].insert_one(raw_sheet)
+      # db.collection(u'psheets').add(raw_sheet)
+    jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
+    if isPlayer:
+        resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
+    else:
+        resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
+  elif req_type == 'change_attr':
+    # someone changed a numeric attribute
+    direction = 'increased' if req['dir'] else 'decreased'
+    lvl_up = ' Level Up!!!' if req['lvl'] else ''
+    # keep same if not shortened version (should only be gems)
+    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
+    resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' +
+    str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up,
+    'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'change_text':
+    # someone has added to textual attribute
+    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
+    resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.', 
+    'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'add_gem':
+    # someone has added new gems
+    resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) + 
+    ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'add_item':
+    # someone added either weapon, item, or spell
+    resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
+    '.', 'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'change_cond':
+    # someone has changed their condition
+    resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
+    '.', 'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'get_blank':
+    # player asking for blank html form to fill out
+    blank_form = get_sheet_form()
+    resp = {'msg': blank_form, 'type': 'create_psheet'}
+  return dumps(resp) # convert JSON to string
+
+
+###############################################
+# begin listening for different socket events #
+###############################################
+
+# on client sending socket message, process request and decide how to form response
+@sockets.route('/play')
+def chat_socket(ws):
+  # while socket is open, process messages
+  while not ws.closed:
+    message = ws.receive()
+    if message is None:  # message is "None" if the client has closed.
+      continue
+    # store name of sender
+    uname = session.get('name')
+    isPlayer = session.get('isPlayer')
+    global r_to_client
+    global u_to_client
+    msg = loads(message) # convert to dict
+    # now process message dependent on type + room, clients
+    clients = list(ws.handler.server.clients.values())
+    room = session.get('room')
+    resp = decide_request(msg, uname, isPlayer, clients, room)
+    # check if broadcast or single event
+    broadcast = True if msg['type'] not in single_events else False
+    # send response to every one in sender's room if broadcast
+    if broadcast:
+      for client in r_to_client[room]:
+        print("sending")
+        print(resp)
+        client.ws.send(resp)
+    else:
+      # otherwise only to sender of event
+      curr = u_to_client[uname]
+      print("sending")
+      print(resp)
+      curr.ws.send(resp)
+
+
+@app.route('/')
+def root():
+    return redirect("/static/index.html", code=302)
+
+@app.route('/play')
+def play():
+    #print ('in play\n')
+    room = session.get('room')
+    name = session.get('name')
+    isPlayer = session.get('isPlayer')
+    return render_template('play.html', room=room, name=name, isPlayer=isPlayer)
+
+#post to join room, store session data for user
+# redirect them to play url
+@app.route('/joinRoom', methods=['POST'])
+def join_post():
+  # store session info for use
+  session['name'] = request.form['uname']
+  session['room'] = request.form['rname']
+  session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
+  session['u_token'] = 'temp' # will have to chagne after we require a login to enter a room
+  return redirect(url_for('.play'), code=302)
+
+# disabling caching by modifying headers of each response
+@app.after_request
+def add_header(resp):
+  resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+  resp.headers['Pragma'] = 'no-cache'
+  resp.headers['Expires'] = '0'
+  return resp
+
+@app.route('/create', methods=['POST'])
+def create_account():
+  try:
+    user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
+    auth.send_email_verification(user['idToken'])
+    newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
+    return redirect('/static/login.html', code=302)
+  except:
+    return redirect('/static/create.html', code=302)
+
+@app.route('/login', methods=['POST'])
+def login_account():
+  try:
+    user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
+    user_token = user_acc['idToken']
+    print(user_token)
+    session['u_token'] = user_token
+    return 'you have logged in as ' + str(request.form['email'])
+  except:
+    return 'something went wrong'
 
 # helper to build HTML for user creating new sheet
 def get_sheet_form():
@@ -1028,171 +1191,6 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
   print('returning from get_stats')
   return raw_resp, resp # return both JSON and HTML for sending to JS
 
-# helper to determine what type of request based on header, form response
-def decide_request(req, uname, isPlayer, clients, room):
-  resp = ""
-  req_type = req['type']
-  if req_type == 'enter':
-    # person has joined room, must take difference of new clients list and old
-    # use to track person in room
-    add_client(clients, room, uname)
-    resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status'}
-  elif req_type == 'text':
-    # someone is sending a message
-    resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
-  elif req_type == 'dice_roll':
-    # someone is asking for dice rolls
-    msg = roll_dice(int(req['dice_type']),req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname)
-    resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
-  elif req_type == 'leave':
-    # someone leaving the room, remove from room client list to avoid issues, print status
-    # also need to update sheet for leaving user, key = UID + title
-    title = req['msg']['sheet_title']
-    uid = uname
-    mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, 
-    req['msg'])
-    remove_client(uname, room)
-    resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
-  elif req_type == 'get_sheet':
-    # client asking for psheet OR DM info, depending on type, send requested info
-    # include both formatted HTML and raw JSON
-    # can be either grabbing from db or forming based on raw JSON
-    if 'title' in req.keys():
-      # title indicates retrieving from db, use UID as key
-      print('shouldnt be here lol')
-    else:
-      # raw JSON of sheet sent in message, store in db using UID as key
-      raw_sheet = req['msg']
-      raw_sheet['uid'] = session['u_token'] # add name as key for retrieving document
-      mongo.db['psheets'].insert_one(raw_sheet)
-      # db.collection(u'psheets').add(raw_sheet)
-    jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
-    if isPlayer:
-        resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
-    else:
-        resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
-  elif req_type == 'change_attr':
-    # someone changed a numeric attribute
-    direction = 'increased' if req['dir'] else 'decreased'
-    lvl_up = ' Level Up!!!' if req['lvl'] else ''
-    # keep same if not shortened version (should only be gems)
-    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
-    resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' +
-    str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up,
-    'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'change_text':
-    # someone has added to textual attribute
-    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
-    resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.', 
-    'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'add_gem':
-    # someone has added new gems
-    resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) + 
-    ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'add_item':
-    # someone added either weapon, item, or spell
-    resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
-    '.', 'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'change_cond':
-    # someone has changed their condition
-    resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
-    '.', 'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'get_blank':
-    # player asking for blank html form to fill out
-    blank_form = get_sheet_form()
-    resp = {'msg': blank_form, 'type': 'create_psheet'}
-  return dumps(resp) # convert JSON to string
-
-
-
-# begin listening for different socket events
-
-# on client sending socket message, process request and decide how to form response
-@sockets.route('/play')
-def chat_socket(ws):
-  # while socket is open, process messages
-  while not ws.closed:
-    message = ws.receive()
-    if message is None:  # message is "None" if the client has closed.
-      continue
-    # store name of sender
-    uname = session.get('name')
-    isPlayer = session.get('isPlayer')
-    global r_to_client
-    global u_to_client
-    msg = loads(message) # convert to dict
-    # now process message dependent on type + room, clients
-    clients = list(ws.handler.server.clients.values())
-    room = session.get('room')
-    resp = decide_request(msg, uname, isPlayer, clients, room)
-    # check if broadcast or single event
-    broadcast = True if msg['type'] not in single_events else False
-    # send response to every one in sender's room if broadcast
-    if broadcast:
-      for client in r_to_client[room]:
-        print("sending")
-        print(resp)
-        client.ws.send(resp)
-    else:
-      # otherwise only to sender of event
-      curr = u_to_client[uname]
-      print("sending")
-      print(resp)
-      curr.ws.send(resp)
-
-
-@app.route('/')
-def root():
-    return redirect("/static/index.html", code=302)
-
-@app.route('/play')
-def play():
-    #print ('in play\n')
-    room = session.get('room')
-    name = session.get('name')
-    isPlayer = session.get('isPlayer')
-    return render_template('play.html', room=room, name=name, isPlayer=isPlayer)
-
-#post to join room, store session data for user
-# redirect them to play url
-@app.route('/joinRoom', methods=['POST'])
-def join_post():
-  # store session info for use
-  session['name'] = request.form['uname']
-  session['room'] = request.form['rname']
-  session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
-  session['u_token'] = 'temp' # will have to chagne after we require a login to enter a room
-  return redirect(url_for('.play'), code=302)
-
-# disabling caching by modifying headers of each response
-@app.after_request
-def add_header(resp):
-  resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-  resp.headers['Pragma'] = 'no-cache'
-  resp.headers['Expires'] = '0'
-  return resp
-
-@app.route('/create', methods=['POST'])
-def create_account():
-  try:
-    user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
-    auth.send_email_verification(user['idToken'])
-    newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
-    return redirect('/static/login.html', code=302)
-  except:
-    return redirect('/static/create.html', code=302)
-
-@app.route('/login', methods=['POST'])
-def login_account():
-  try:
-    user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
-    user_token = user_acc['idToken']
-    print(user_token)
-    session['u_token'] = user_token
-    return 'you have logged in as ' + str(request.form['email'])
-  except:
-    return 'something went wrong'
-    
 if __name__ == '__main__':
   print("""
   This can not be run directly because the Flask development server does not
