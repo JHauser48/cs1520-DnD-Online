@@ -30,6 +30,9 @@ u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
 last_client = []            # use to store previous clients list, compare to track clients
 single_events = ['get_sheet', 'get_blank'] # track events where should only be sent to sender of event, i.e. not broadcast
+user_acc = ''
+user_token = ''
+
 # map level to amount of XP needed
 level_to_xp = {
   2: '300',
@@ -55,13 +58,13 @@ level_to_xp = {
 
 # for both mods and figuring out attr changed
 mod_stats = {
-  'none' : 'None',
-  'str' : 'Strength',
-  'const' : 'Constitution',
-  'dex' : 'Dexterity',
-  'intell' : 'Intelligence',
-  'wis' : 'Wisdom',
-  'char' : 'Charisma',
+  'none': 'None',
+  'str': 'Strength',
+  'const': 'Constitution',
+  'dex': 'Dexterity',
+  'intell': 'Intelligence',
+  'wis': 'Wisdom',
+  'char': 'Charisma',
   'hp': 'Hit Points',
   'xp': 'Experience Points',
   'hero': 'Heroics',
@@ -1060,7 +1063,7 @@ def decide_request(req, uname, isPlayer, clients, room):
     else:
       # raw JSON of sheet sent in message, store in db using UID as key
       raw_sheet = req['msg']
-      raw_sheet['uid'] = uname # add name as key for retrieving document
+      raw_sheet['uid'] = session['u_token'] # add name as key for retrieving document
       mongo.db['psheets'].insert_one(raw_sheet)
       # db.collection(u'psheets').add(raw_sheet)
     jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
@@ -1158,6 +1161,7 @@ def join_post():
   session['name'] = request.form['uname']
   session['room'] = request.form['rname']
   session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
+  session['u_token'] = 'temp' # will have to chagne after we require a login to enter a room
   return redirect(url_for('.play'), code=302)
 
 # disabling caching by modifying headers of each response
@@ -1170,16 +1174,25 @@ def add_header(resp):
 
 @app.route('/create', methods=['POST'])
 def create_account():
-
+  try:
     user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
     auth.send_email_verification(user['idToken'])
     newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
-    #db.collection(u'user').add(newData)
-
     return redirect('/static/login.html', code=302)
+  except:
+    return redirect('/static/create.html', code=302)
 
-
-
+@app.route('/login', methods=['POST'])
+def login_account():
+  try:
+    user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
+    user_token = user_acc['idToken']
+    print(user_token)
+    session['u_token'] = user_token
+    return 'you have logged in as ' + str(request.form['email'])
+  except:
+    return 'something went wrong'
+    
 if __name__ == '__main__':
   print("""
   This can not be run directly because the Flask development server does not
