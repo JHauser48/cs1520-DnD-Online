@@ -18,6 +18,9 @@ $(document).ready(function(){
     var sheet = isPlayer ? $('#sheet') : $('#dmstuff'); //save sheet element for adding in sheet/DM info
     var raw_sheet; //JSON version of sheet, use for updates during session, send back to server at end for updating in DB
     var l2x;      //used for players that need xp for next level, map level to needed XP
+    var cond_list = ['Normal', 'Blinded', 'Charmed', 'Deafened', 'Fatigued', 'Frightened', 'Grappled', 
+    'Incapacitated', 'Invisible', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained',
+    'Stunned', 'Unconscious'];  //list of all possible conditions, use for list
 
     //DM variables
     var newMonsterEdit = { //new monster info that gets input into the html
@@ -70,11 +73,8 @@ $(document).ready(function(){
     //when new connection opened, should send type: enter
     socket.onopen = function(){
 	    console.log("opened socket");
-      // store in JSON for easy Python parsing
       // first send request for entry, then psheet or DM info
       let msg = JSON.stringify({type: 'enter'});
-      socket.send(msg);
-      msg = JSON.stringify({type: 'get_sheet'});
       socket.send(msg);
     };
 
@@ -95,17 +95,21 @@ $(document).ready(function(){
           $('#chatlog').scrollTop($('#chatlog')[0].scrollHeight);
           break;
         case 'sheet':
+          $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load (if there)
+          sheet.css('display', 'inline-block');    //unhide sheet
           //server has sent the psheet or DM info for this player
           sheet.html(data.msg);   // add sheet to HTML
           raw_sheet = data.raw;   //store JSON
           l2x = data.l2x; //save level xp info
           //add current gems into options for changing
           let gem_html = "";
+          if (raw_sheet.treasures.hasOwnProperty('gems')) {
           raw_sheet.treasures.gems.forEach((gem) => {
             let gem_name = gem.name
             gem_html += `<option value="${gem_name}">${gem_name}</option>`
           });
           $('#change_attrs').append(gem_html);
+        }
 
           // --- BEGIN HANDLERS FOR PSHEET ELEMENTS ---
           //handle if user clicks spells, need to switch to spell view
@@ -137,121 +141,192 @@ $(document).ready(function(){
 
           //handle if user wants to add text in comma sep vals
           $('.btn.add_text.add_com').click(function() {
-            //insert text box for entering in new value
-            let but_id = this;    //where are we adding?
-            //form new ids for input based on button clicked
-            let in_id = this.id + "_input";
-            let sub_id = this.id + "_sub";
-            //first check if an input has already been created, if so, output error
-            //should submit that one first
-            if ($('#' + in_id).length) {
-              let in_field = $('#' + in_id);
-              in_field[0].setCustomValidity('Must submit before creating new');
-              in_field[0].reportValidity();
-              return;
+            let rv = add_comma_val(this.id, raw_sheet);
+            if (typeof rv !== 'undefined') {
+              //returns undefined if there is an error in input, must check
+              //store updated sheet otherwise
+              raw_sheet = rv;
             }
-            $(but_id).before(`<input class="in add_text add_com" id=${in_id}` +
-            ` placeholder="Enter new element..."><button class = "btn add_text sub_com"
-            id=${sub_id}>Submit</button>`);
-            //register handler for newly created field + button if a add on is submitted
-            $('#' + sub_id).click(function() {
-              let in_id = this.id.replace('sub', 'input');
-              let in_field = $('#' + in_id).val();
-              //must be non empty
-              if (in_field.length == 0) {
-                $('#' + in_id)[0].setCustomValidity("Input must not be empty");
-                $('#' + in_id)[0].reportValidity();
-                return;
-              }
-              $('#' + in_id)[0].setCustomValidity("");
-              $('#' + in_id).val(''); //clear
-              //closest div up in hierarchy will be where to add text
-              let parent = $('#' + in_id).closest('div');
-              //remove unneeded fields
-              $('#' + sub_id).remove();
-              $('#' + in_id).remove();
-              //find button in div to where to add text before
-              let but_child = parent.children('button');
-              //must add to HTML and JSON
-              $(but_child).before(', ' + in_field);
-              let j_key = get_key(parent[0].id);
-              raw_sheet[j_key].push(in_field);
-              //now send message indicating change    
-              let msg = JSON.stringify({type: 'change_text', attr: j_key, change: in_field});
-              socket.send(msg);    
-            });
           });
 
           //handle if user wants to add gem
           $('#add_gem').click(function() {
-            //form new ids for input based on button clicked
-            let in_id = this.id + "_input";
-            let num_id = this.id + "_num";
-            let sub_id = this.id + "_sub";
-            //first check if an input has already been created, if so, output error
-            //should submit that one first
-            if ($('#' + in_id).length || $('#' + num_id).length) {
-              let in_field = $('#' + in_id);
-              in_field[0].setCustomValidity('Must submit before creating new');
-              in_field[0].reportValidity();
-              return;
+            let rv = add_gem(this.id, raw_sheet, true);     //use helper
+            if (typeof rv !== 'undefined') {
+              raw_sheet = rv;
             }
-            //add text fields for gem + num, also submit button (wrap in new row + col)
-            $('#gem_but').before(`<div class="row"><div class="col treasfields">` +
-            `<input class="in add_text add_gem" id=${in_id}` +
-            ` placeholder="Name"> <input class="in add_text add_gem"` +
-            ` id=${num_id} placeholder="Amount">` +
-            `<button class="btn add_text sub_com" id=${sub_id}>Submit</button></div></div>`);
-            
-            //register handler for newly created field + button if an add on is submitted
-            $('#' + sub_id).click(function() {
-              let in_id = this.id.replace('sub', 'input');
-              let num_id = this.id.replace('sub', 'num') ;
-              let in_field = $('#' + in_id).val();
-              let num_field = $('#' + num_id).val();
-              //both must be non-empty, second must be number
-              if (in_field.length == 0) {
-                $('#' + in_id)[0].setCustomValidity("Name must not be empty");
-                $('#' + in_id)[0].reportValidity();
-                return;
-              }
-              if (num_field.length == 0) {
-                $('#' + num_id)[0].setCustomValidity("Amount must not be empty");
-                $('#' + num_id)[0].reportValidity();
-                return;
-              }
-              if (!(/^\+?\d+$/.test(num_field))) {
-                $('#' + num_id)[0].setCustomValidity("Value must be non-negative integer");
-                $('#' + num_id)[0].reportValidity();
-                return;
-              }
-              $('#' + in_id)[0].setCustomValidity("");
-              $('#' + in_id).val(''); //clear
-              $('#' + num_id)[0].setCustomValidity("");
-              $('#' + num_id).val(''); //clear
-              //closest col in hierarchy will be where to insert new gem
-              let parent = $('#' + in_id).closest('.col');
-              //remove unneeded fields
-              $('#' + sub_id).remove();
-              $('#' + in_id).remove();
-              $('#' + num_id).remove();
-              //must add to HTML and JSON
-              parent.attr('id', in_field);      //id == name of gem
-              parent.html(in_field + ": " + num_field);
-              let gem_obj = {name: in_field, num: num_field};
-              raw_sheet['treasures']['gems'].push(gem_obj);
-              //now add to options for increase/decrease, send message to server
-              let gem_html = `<option value="${in_field}">${in_field}</option>`;
-              $('#change_attrs').append(gem_html);
-              let msg = JSON.stringify({type: 'add_gem', attr: in_field, change: num_field});
-              socket.send(msg);    
-            });
-           });
+          });
 
            //handle if user wants to add table entry (i.e. weapons, spells, items)
-           $('.btn.add_text.add_table').click(function() {
-            add_item(this.id);      //employ helper to deal with html
+          $('.btn.add_text.add_table').click(function() {
+            let rv = add_item(this.id, raw_sheet, true);      //employ helper to deal with html
+            if (typeof rv !== 'undefined') {
+              raw_sheet = rv;
+            }
+          });
+
+           //handle if user wants to change condition
+          $('#change_cond').click(function() {
+            console.log("clicked change_cond");     //DEBUG
+            let but_id = this;    //where are we adding?
+            let sel_id = this.id + '_sel';
+            let sub_id = this.id + '_sub';
+            //first check if an input has already been created, if so, output error
+            //should submit that one first
+            if ($('#' + sel_id).length) {
+              let sel_field = $('#' + sel_id);
+              sel_field[0].setCustomValidity('Must submit before creating new');
+              sel_field[0].reportValidity();
+              return;
+            }
+            //add select fields for condition also submit button
+            //build string of condition options
+            var cond_string = "";  
+            cond_list.forEach((cond) => {
+              cond_string += `<option value="${cond}">${cond}</option>`
+            });
+            $(but_id).before(`<select class="attr_amt" id=${sel_id}>` +
+            `${cond_string}</select>` +
+            `<button class="btn add_text sub_com" id=${sub_id}>Submit</button>`);
+            //register handler for newly created field + button if an add on is submitted
+            $('#' + sub_id).click(function() {
+              let sel_id = this.id.replace('sub', 'sel');
+              $('#' + sel_id)[0].setCustomValidity('');
+              let sel_field = $('#' + sel_id).val();
+              $('#' + sub_id).remove();
+              $('#' + sel_id).remove();
+              //must add to HTML and JSON
+              $('#cond_text').html(`Current Condition: ${sel_field}`);
+              let last_cond = raw_sheet['condition']
+              raw_sheet['condition'] = sel_field;
+              console.log(raw_sheet);     //DEBUG
+              let msg = JSON.stringify({type: 'change_cond', change: sel_field, last: last_cond});
+              socket.send(msg);    
+            });
+          });
+           
+          break;
+        case 'create_psheet':
+          //server has sent psheet form for sheet creation
+          $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load
+          sheet.css('display', 'inline-block');    //unhide sheet]
+          sheet.html(data.msg);       //display form
+          var sheet_obj = {};         //save all newly added attributes for sending back to the server
+          // ---BEGIN HANDLERS---
+          //handle if user clicks spells, need to switch to spell view
+          $('#show_spell').click(function() {
+            // set weapons to hidden, spells to shown, change "click" text to other
+            // IF Not already shown
+            if ($('.pspells').attr('id') == 'hidden') {
+              $('.pweps').attr('id', 'hidden');
+              $('.pspells').attr('id', 'shown');
+              $('#show_wep').append(' (click to view)');
+              let curr_html = $('#show_spell').html();
+              curr_html = curr_html.replace(' (click to view)', '');
+              $('#show_spell').html(curr_html);
+            }
+          });
+          //handle if user clicks weps, need to switch to wep view
+          $('#show_wep').click(function() {
+            // set weapons to hidden, spells to shown, change "click" text to other
+            // IF not already shown
+            if ($('.pweps').attr('id') == 'hidden') {
+              $('.pspells').attr('id', 'hidden');
+              $('.pweps').attr('id', 'shown');
+              $('#show_spell').append(' (click to view)');
+              let curr_html = $('#show_wep').html();
+              curr_html = curr_html.replace(' (click to view)', '');
+              $('#show_wep').html(curr_html);
+            }
+          });
+          //handle if user wants to add text in comma sep vals
+          $('.btn.add_text.add_com').click(function() {
+            let rv = add_comma_val(this.id, sheet_obj);
+            if (typeof rv !== 'undefined') {
+              sheet_obj = rv;
+            }
+          });
+          //handle if user wants to add gem
+          $('#add_gem').click(function() {
+            let rv = add_gem(this.id, sheet_obj, false);
+            if (typeof rv !== 'undefined') {
+              sheet_obj = rv;
+            }
            });
+          //handle if user wants to add table entry (i.e. weapons, spells, items)
+          $('.btn.add_text.add_table').click(function() {
+            let rv = add_item(this.id, sheet_obj, false);      //employ helper to deal with html
+            if (typeof rv !== 'undefined') {
+              sheet_obj = rv;
+            }
+          });
+          //now when user submits sheet, must validate input, form JSON, send to server
+          $('#sub_sheet').click(function() {
+            var req_fields = {};      //dict of all required fields use for checking
+            let req_list = ['ptitle', 'pname', 'pstr', 'pdex', 'pconst', 'pintell', 'pwis',
+            'pchar', 'php', 'ppp', 'pgp', 'pep', 'psp', 'pcp', 'pbase', 'pcurr'];
+            req_list.forEach((req) => {
+              req_fields[req] = $('#' + req).val();
+            });
+            //ensure not empty
+            var empty = false;
+            Object.keys(req_fields).forEach((key) => {
+              if (req_fields[key].length == 0) {
+                empty = true;
+                $('#' + key)[0].setCustomValidity("Field must not be empty");
+                $('#' + key)[0].reportValidity();
+                return;
+              }
+            });
+            if (empty)      return;     //empty
+            //now ensure fields that must be non-negative numbers are (i.e. all except name, speeds, title)
+            Object.keys(req_fields).forEach((key) => {
+              if (key != 'pname' && key != 'pbase' && key != 'pcurr' && key != 'ptitle') {
+                if (!(/^\+?\d+$/.test(req_fields[key]))) {
+                  empty = true;
+                  $('#' + key)[0].setCustomValidity("Field must a non-negative Integer");
+                  $('#' + key)[0].reportValidity();
+                  return;
+                }
+              }
+            });
+            if (empty)      return;     //empty
+            //now loop thru and clear fields
+            Object.keys(req_fields).forEach((key) => {
+              $('#' + key)[0].setCustomValidity("");
+              $('#' + key).val(''); 
+            });
+            //now that input validation is done, we can start storing attrs in JSON
+            sheet_obj['sheet_title'] = req_fields['ptitle'];
+            sheet_obj['name'] = req_fields['pname'];
+            sheet_obj['class'] = $('#pclass').val();
+            sheet_obj['race'] = $('#prace').val();
+            sheet_obj['align'] = $('#palign').val();
+            sheet_obj['ability-scores'] = {};
+            sheet_obj['ability-scores']['str'] = req_fields['pstr'];
+            sheet_obj['ability-scores']['dex'] = req_fields['pdex'];
+            sheet_obj['ability-scores']['const'] = req_fields['pconst'];
+            sheet_obj['ability-scores']['intell'] = req_fields['pintell'];
+            sheet_obj['ability-scores']['wis'] = req_fields['pwis'];
+            sheet_obj['ability-scores']['char'] = req_fields['pchar'];
+            sheet_obj['level'] = '1';           //everybody starts at level 1
+            sheet_obj['xp'] = '0';          //everyone starts w 0 xp
+            sheet_obj['hp'] = req_fields['php'];
+            sheet_obj['condition'] = 'Normal';      //everyone starts out normal
+            sheet_obj['base_speed'] = req_fields['pbase'];
+            sheet_obj['curr_speed'] = req_fields['pcurr'];
+            if (!sheet_obj.hasOwnProperty('treasures')) {
+              sheet_obj['treasures'] = {};
+            }
+            sheet_obj['treasures']['gp'] = req_fields['pgp'];
+            sheet_obj['treasures']['cp'] = req_fields['pcp'];
+            sheet_obj['treasures']['pp'] = req_fields['ppp'];
+            sheet_obj['treasures']['ep'] = req_fields['pep'];
+            sheet_obj['treasures']['sp'] = req_fields['psp'];
+            //now send to server to build
+            let msg = JSON.stringify({type: 'get_sheet', msg: sheet_obj});
+            socket.send(msg);
+          });
           break;
         case 'dmstuff':
           //server has sent the dm sheet
@@ -336,14 +411,154 @@ $(document).ready(function(){
       }
     }
 
+    //function to deal with player adding in csv item (e.g. languages)
+    function add_comma_val(but_id, sheet_json) {
+      //insert text box for entering in new value
+      //form new ids for input based on button clicked
+      let in_id = this.id + "_input";
+      let sub_id = this.id + "_sub";
+      var j_key = "";
+      var in_field = "";
+      var sheet_json = sheet_json;
+      //first check if an input has already been created, if so, output error
+      //should submit that one first
+      if ($('#' + in_id).length) {
+        in_field = $('#' + in_id);
+        in_field[0].setCustomValidity('Must submit before creating new');
+        in_field[0].reportValidity();
+        return;
+      }
+      $('#' + but_id).before(`<input class="in add_text add_com" id=${in_id}` +
+      ` placeholder="Enter new element..."><button class = "btn add_text sub_com"
+      id=${sub_id}>Submit</button>`);
+      //register handler for newly created field + button if a add on is submitted
+      $('#' + sub_id).click(function() {
+        let in_id = this.id.replace('sub', 'input');
+        in_field = $('#' + in_id).val();
+        //must be non empty
+        if (in_field.length == 0) {
+          $('#' + in_id)[0].setCustomValidity("Input must not be empty");
+          $('#' + in_id)[0].reportValidity();
+          return;
+        }
+        $('#' + in_id)[0].setCustomValidity("");
+        $('#' + in_id).val(''); //clear
+        submit = true;
+        //closest div up in hierarchy will be where to add text
+        let parent = $('#' + in_id).closest('div');
+        //remove unneeded fields
+        $('#' + sub_id).remove();
+        $('#' + in_id).remove();
+        //find button in div to where to add text before
+        let but_child = parent.children('button');
+        //must add to HTML and JSON
+        let first = false;
+        j_key = get_key(parent[0].id);
+        if (!sheet_json.hasOwnProperty(j_key)) {
+          // if no props added yet, add array, also output is different
+          first = true;
+          sheet_json[j_key] = [];
+        }
+        if (first) {
+          $(but_child).before(in_field);
+        } else {
+          $(but_child).before(', ' + in_field);
+        }
+        sheet_json[j_key].push(in_field);
+        let msg = JSON.stringify({type: 'change_text', attr: j_key, change: in_field});
+        socket.send(msg);         //send update to server
+      });
+      return sheet_json;
+    }
+
+    //helper to deal with player adding a gem
+    function add_gem(but_id, sheet_json, full_sheet) {
+      //form new ids for input based on button clicked
+      let in_id = but_id + "_input";
+      let num_id = but_id + "_num";
+      let sub_id = but_id + "_sub";
+      var in_field = "";
+      var num_field = "";
+      var sheet_json = sheet_json;
+      //first check if an input has already been created, if so, output error
+      //should submit that one first
+      if ($('#' + in_id).length || $('#' + num_id).length) {
+        in_field = $('#' + in_id);
+        in_field[0].setCustomValidity('Must submit before creating new');
+        in_field[0].reportValidity();
+        return;
+      }
+      //add text fields for gem + num, also submit button (wrap in new row + col)
+      $('#gem_but').before(`<div class="row"><div class="col treasfields">` +
+      `<input class="in add_text add_gem" id=${in_id}` +
+      ` placeholder="Name"> <input class="in add_text add_gem"` +
+      ` id=${num_id} placeholder="Amount">` +
+      `<button class="btn add_text sub_com" id=${sub_id}>Submit</button></div></div>`);
+      
+      //register handler for newly created field + button if an add on is submitted
+      $('#' + sub_id).click(function() {
+        let in_id = this.id.replace('sub', 'input');
+        let num_id = this.id.replace('sub', 'num') ;
+        in_field = $('#' + in_id).val();
+        num_field = $('#' + num_id).val();
+        //both must be non-empty, second must be number
+        if (in_field.length == 0) {
+          $('#' + in_id)[0].setCustomValidity("Name must not be empty");
+          $('#' + in_id)[0].reportValidity();
+          return;
+        }
+        if (num_field.length == 0) {
+          $('#' + num_id)[0].setCustomValidity("Amount must not be empty");
+          $('#' + num_id)[0].reportValidity();
+          return;
+        }
+        if (!(/^\+?\d+$/.test(num_field))) {
+          $('#' + num_id)[0].setCustomValidity("Value must be non-negative integer");
+          $('#' + num_id)[0].reportValidity();
+          return;
+        }
+        $('#' + in_id)[0].setCustomValidity("");
+        $('#' + in_id).val(''); //clear
+        $('#' + num_id)[0].setCustomValidity("");
+        $('#' + num_id).val(''); //clear
+        //closest col in hierarchy will be where to insert new gem
+        let parent = $('#' + in_id).closest('.col');
+        //remove unneeded fields
+        $('#' + sub_id).remove();
+        $('#' + in_id).remove();
+        $('#' + num_id).remove();
+        //must add to HTML and JSON
+        parent.attr('id', in_field);      //id == name of gem
+        parent.html(in_field + ": " + num_field);
+        let gem_obj = {name: in_field, num: num_field};
+        if (!sheet_json.hasOwnProperty('treasures')) {
+          //create if not already there
+          sheet_json['treasures'] = {};
+        }
+        if (!sheet_json['treasures'].hasOwnProperty('gems')) {
+          //create if not already there
+          sheet_json['treasures']['gems'] = [];
+        }
+        sheet_json['treasures']['gems'].push(gem_obj);
+        if (full_sheet) {
+          //now add to options for increase/decrease IF it's not just sheet creation
+          let gem_html = `<option value="${in_field}">${in_field}</option>`;
+          $('#change_attrs').append(gem_html);
+        }
+        let msg = JSON.stringify({type: 'add_gem', attr: in_field, change: num_field});
+        socket.send(msg);    
+      });
+      return sheet_json;
+    }
+
     //helper to deal with a player adding a table item (i.e. weapon, spell, item)
-    function add_item(but_id) {
+    function add_item(but_id, sheet_json, full_sheet) {
       let sub_id = but_id + "_sub";  //id of submit button, all types have one
       let name_id = but_id + "_name"; //same w name
       let ran_id = "";
       let not_id = "";
+      var sheet_json = sheet_json;
       var item_type = "";       //weapon, item, spell
-      var item_name = "";       //for socket message
       switch(but_id) {
         case 'add_wep':
           //adding a weapon
@@ -379,7 +594,6 @@ $(document).ready(function(){
             let field_arr = {};     //store all id to field maps for looping
             let name_id = this.id.replace('sub', 'name');
             let name_field = $('#' + name_id).val();
-            item_name = name_field;
             field_arr[name_id] = name_field;
             let hit_id = this.id.replace('sub', 'to_hit');
             let hit_field = $('#' + hit_id).val();
@@ -419,14 +633,16 @@ $(document).ready(function(){
               let raw_key = key.replace('add_wep_', '');  //convert id to json key
               wep_obj[raw_key] = field_arr[key]; 
             });
-            raw_sheet['weps'].push(wep_obj);      //save newly created weapon object
+            if (!sheet_json.hasOwnProperty('weps')) {
+              sheet_json['weps'] = [];
+            }
+            sheet_json['weps'].push(wep_obj);      //save newly created weapon object
             //remove submit button for now
             let parent = this.closest('.row');   //start nearest row, remove all children
             $(parent).children().remove();
             $(parent).remove();
-            //now just send a socket message indicating adding an item
             item_type = "Weapons";
-            let msg = JSON.stringify({type: 'add_item', name: item_name, it_type: item_type});
+            let msg = JSON.stringify({type: 'add_item', name: name_field, it_type: item_type});
             socket.send(msg);
           });
           break;
@@ -472,7 +688,6 @@ $(document).ready(function(){
             let field_arr = {};     //store all id to field maps for looping
             let name_id = this.id.replace('sub', 'name');
             let name_field = $('#' + name_id).val();
-            item_name = name_field;
             field_arr[name_id] = name_field;
             let lev_id = this.id.replace('sub', 'level');
             let lev_field = $('#' + lev_id).val();
@@ -541,15 +756,16 @@ $(document).ready(function(){
             spec_html = att_arr[0] + ';<br>' + att_arr[1];
             parent = $('#' + att_id).closest('.col');
             parent.html(spec_html);
-            raw_sheet['spells'].push(spell_obj);        //save new spell
-            console.log(raw_sheet);       //debug
+            if (!sheet_json.hasOwnProperty('spells')) {
+              sheet_json['spells'] = [];
+            }
+            sheet_json['spells'].push(spell_obj);        //save new spell
             //remove submit button for now
             parent = this.closest('.row');   //start nearest row, remove all children + row
             $(parent).children().remove();
             $(parent).remove();
-            //now just send message over socket
             item_type = "Spells";
-            let msg = JSON.stringify({type: 'add_item', name: item_name, it_type: item_type});
+            let msg = JSON.stringify({type: 'add_item', name: name_field, it_type: item_type});
             socket.send(msg);
           });
           break;
@@ -581,7 +797,6 @@ $(document).ready(function(){
             let field_arr = {};     //store all id to field maps for looping
             let name_id = this.id.replace('sub', 'name');
             let name_field = $('#' + name_id).val();
-            item_name = name_field;
             field_arr[name_id] = name_field;
             let weight_id = this.id.replace('sub', 'weight');
             let weight_field = $('#' + weight_id).val();
@@ -611,6 +826,7 @@ $(document).ready(function(){
               $('#' + key)[0].setCustomValidity("");
               $('#' + key).val(''); 
             });
+            submit = true;
             //now, go thru each, update HTML and JSON
             //closest col in hierarchy will be where to insert new item attr
             //each corresponding col content will need to be updated
@@ -621,23 +837,28 @@ $(document).ready(function(){
               let raw_key = key.replace('add_item_', '');  //convert id to json key
               item_obj[raw_key] = field_arr[key]; 
             });
-            //since item added, we must update current carry weight
-            let curr_weight = Number($('#weight_total').html().match(/\d+/g));
-            curr_weight += Number(weight_field);
-            $('#weight_total').html(curr_weight);
-            raw_sheet['items'].push(item_obj);
-            console.log(raw_sheet);       //DEBUG
+            if (full_sheet) {
+              //since item added, we must update current carry weight ONLY IF NOT CREATION
+              let curr_weight = Number($('#weight_total').html().match(/\d+/g));
+              curr_weight += Number(weight_field);
+              $('#weight_total').html(curr_weight);
+            }
+            if (!sheet_json.hasOwnProperty('items')) {
+              sheet_json['items'] = [];
+            }
+            sheet_json['items'].push(item_obj);
             //remove submit button for now
             let parent = this.closest('.row');   //start nearest row, remove all children
             $(parent).children().remove();
             $(parent).remove();
-            //now just send a socket message indicating adding an item
             item_type = "Items";
-            let msg = JSON.stringify({type: 'add_item', name: item_name, it_type: item_type});
+            let msg = JSON.stringify({type: 'add_item', name: name_field, it_type: item_type});
             socket.send(msg);
           });
           break;
       }
+      //return attrs in array for easy socket messages
+      return sheet_json;
     }
 
     //Begin handlers for user-initiated events
@@ -746,6 +967,13 @@ $(document).ready(function(){
             $('#max_weight').html(new_weight);
           }
           let new_mod = calc_mod(curr);
+          if(attr == 'dex') {
+            //armor class based on dex modifier + 10, update
+            let curr_ac = $('#armor').html();
+            let new_ac = new_mod + 10;
+            curr_ac = curr_ac.replace(/\d+/g, new_ac);
+            $('#armor').html(curr_ac);
+          }
           let curr_mod = $('#' + attr + '_mod').html();
           curr_mod = curr_mod.replace(/\d+/g, new_mod);
           $('#' + attr + '_mod').html(curr_mod);
@@ -804,7 +1032,9 @@ $(document).ready(function(){
 
     //helper to calculate modifier for stat
     function calc_mod(stat_val){
-      return Math.floor((Number(stat_val)-10) / 2)
+      let mod_try = Math.floor((Number(stat_val)-10) / 2);
+      //don't return negative
+      return (mod_try >= 0) ? mod_try : 0;
     }
 
     //helper to get JSON key based on where text added (could've used hash/dict I guess but whatever)
@@ -826,6 +1056,13 @@ $(document).ready(function(){
       }
       return key;
     }
+
+    //handle if user wants to create a new psheet, get HTML of form from server
+    $('#create_sheet').click(function() {
+      //ask for blank html to fill out
+      let msg = JSON.stringify({type: 'get_blank'});
+      socket.send(msg);
+    });
 
     //handle if user chooses to leave the room
     $('#leave').click(function(){

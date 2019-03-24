@@ -88,6 +88,7 @@ body{
 }
 
 #sheet{
+    display: none;
     float: left;
     background-color: rgba(26, 26, 23, 0.96);
     color: rgba(230, 155, 171, 0.96);
@@ -203,12 +204,25 @@ input[type="radio"]{
   margin-left: 5px;
 }
 
+.btn.but_sheet {
+  font-size: 20px;
+  margin: auto;
+}
+
 .in.add_text.add_gem {
   width: 70%;
 }
 
 .in.add_text.add_table {
   width: 100%;
+}
+
+.in.create_p.attr {
+  width: 50%;
+}
+
+.in.add_text.add_com {
+  width: 70%;
 }
 
 .footer {

@@ -5,11 +5,14 @@ import random
 import json
 from yattag import Doc
 import pyrebase
-from google.cloud import firestore
-from google.oauth2 import service_account
+from flask_pymongo import PyMongo
+import dns
+from bson.json_util import loads, dumps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'memeslol'
+app.config["MONGO_URI"] = "mongodb+srv://admin:1520isanepicclass%5F@dnd1520-zn4pg.gcp.mongodb.net/play?retryWrites=true"
+mongo = PyMongo(app)
 
 # firebase config (ONLY USED FOR AUTHENTICATION)
 config = {
@@ -21,15 +24,12 @@ config = {
 }
 fb = pyrebase.initialize_app(config) # initialize firebase connection
 auth = fb.auth()
-creds = service_account.Credentials.from_service_account_file(
-    './creds/CS1520Public-e5fe60f3af3f.json')
-db = firestore.Client(project='dndonline', credentials=creds)
 
 sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
 last_client = []            # use to store previous clients list, compare to track clients
-single_events = ['get_sheet'] # track events where should only be sent to sender of event, i.e. not broadcast
+single_events = ['get_sheet', 'get_blank'] # track events where should only be sent to sender of event, i.e. not broadcast
 # map level to amount of XP needed
 level_to_xp = {
   2: '300',
@@ -77,6 +77,48 @@ mod_stats = {
   'special': 'Special Skills & Abilities'
 }
 
+# map all abbreviated ids to full name for printing
+class_abbrev = {
+  'barb': 'Barbarian',
+  'bard': 'Bard',
+  'cleric': 'Cleric',
+  'druid': 'Druid',
+  'fight': 'Fighter',
+  'monk': 'Monk',
+  'pal': 'Paladin',
+  'ranger': 'Ranger',
+  'rogue': 'Rogue',
+  'sorc': 'Sorcerer',
+  'warl': 'Warlock',
+  'wiz': 'Wizard'
+}
+
+race_abbrev = {
+  'drag': 'Dragonborn',
+  'dwarf': 'Dwarf',
+  'elf': 'Elf',
+  'halfelf': 'Half-Elf',
+  'halfling': 'Halfling',
+  'halforc': 'Half-Orc',
+  'human': 'Human',
+  'tief': 'Tiefling'
+}
+
+align_abbrev = {
+  'lg': 'Lawful Good',
+  'ng': 'Neutral Good',
+  'cg': 'Chaotic Good',
+  'ln': 'Lawful Neutral',
+  'neu': 'Neutral',
+  'cn': 'Chaotic Neutral',
+  'le': 'Lawful Evil',
+  'ne': 'Neutral Evil',
+  'ce': 'Chaotic Evil'
+}
+
+#class PlayerStats(db.Model):
+  #__tablename__ = 'pstats'
+
 # helper to roll dice, takes dice type and adv/disadv attributes
 def roll_dice(size, mod, mod_v, adv, dis, uname):
   mod_val = modifier(mod_v)
@@ -94,7 +136,9 @@ def roll_dice(size, mod, mod_v, adv, dis, uname):
   return msg
 
 def modifier(mod_value):
-  return (int(mod_value)-10) // 2
+  mod_try = (int(mod_value)-10) // 2
+  # don't return negative
+  return mod_try if mod_try >= 0 else 0
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
 def add_client(clients, room, uname):
@@ -122,64 +166,274 @@ def remove_client(uname, room):
   if to_rem in last_client:
     last_client.remove(to_rem)  # client gone
 
+# helper to build HTML for user creating new sheet
+def get_sheet_form():
+  doc, tag, text= Doc().tagtext()
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col title'):
+      text('~ Player Sheet Creation ~')
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col title'):
+      text('Name your Sheet: ')
+      doc.asis('<input class="in create_p" id="ptitle" placeholder="Title">')
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col namebox'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col title'):
+          text('~ Character Info ~')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col namefields', id='name'):
+          text('Enter Character Name: ')
+          doc.asis('<input class="in create_p" id="pname" placeholder="Name">')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col namefields', id='class'):
+          text('Class: ')
+          with tag('select', klass='sel create_p', id="pclass"):
+            with tag('option', value='barb'):
+              text('Barbarian')
+            with tag('option', value='bard'):
+              text('Bard')
+            with tag('option', value='cleric'):
+              text('Cleric')
+            with tag('option', value='druid'):
+              text('Druid')
+            with tag('option', value='fight'):
+              text('Fighter')
+            with tag('option', value='monk'):
+              text('Monk')
+            with tag('option', value='pal'):
+              text('Paladin')
+            with tag('option', value='ranger'):
+              text('Ranger')
+            with tag('option', value='rogue'):
+              text('Rogue')
+            with tag('option', value='sorc'):
+              text('Sorcerer')
+            with tag('option', value='warl'):
+              text('Warlock')
+            with tag('option', value='wiz'):
+              text('Wizard')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col namefields', id='race'):
+          text('Race: ')
+          with tag('select', klass='sel create_p', id="prace"):
+            with tag('option', value='drag'):
+              text('Dragonborn')
+            with tag('option', value='dwarf'):
+              text('Dwarf')
+            with tag('option', value='elf'):
+              text('Elf')
+            with tag('option', value='halfelf'):
+              text('Half-Elf')
+            with tag('option', value='halfling'):
+              text('Halfling')
+            with tag('option', value='halforc'):
+              text('Half-Orc')
+            with tag('option', value='human'):
+              text('Human')
+            with tag('option', value='tief'):
+              text('Tiefling')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col namefields', id='align'):
+          text('Alignment: ')
+          with tag('select', klass='sel create_p', id="palign"):
+            with tag('option', value='lg'):
+              text('Lawful Good')
+            with tag('option', value='ng'):
+              text('Neutral Good')
+            with tag('option', value='cg'):
+              text('Chaotic Good')
+            with tag('option', value='ln'):
+              text('Lawful Neutral')
+            with tag('option', value='neu'):
+              text('Neutral')
+            with tag('option', value='cn'):
+              text('Chaotic Neutral')
+            with tag('option', value='le'):
+              text('Lawful Evil')
+            with tag('option', value='ne'):
+              text('Neutral Evil')
+            with tag('option', value='ce'):
+              text('Chaotic Evil')
+    with tag('div', klass = 'col levelbox'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col title'):
+          text('~ Knowledge ~')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col levelfields', id='langs'):
+          text('Languages: ')
+          doc.asis('<button class="btn add_text add_com" id="add_lang">Add</button>')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col levelfields', id='condenhan'):
+          text('Conditions & Enchantments: ')
+          doc.asis('<button class="btn add_text add_com" id="add_cond">Add</button>')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col levelfields', id='resist'):
+          text('Resistances: ')
+          doc.asis('<button class="btn add_text add_com" id="add_resist">Add</button>')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col levelfields', id='specs'):
+          text('Special Skills & Abilities: ')
+          doc.asis('<button class="btn add_text add_com" id="add_spec">Add</button>')
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col attrbox'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col title'):
+          text('~ Ability Scores ~')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col str', id='str'):
+          text('Strength: ')
+          doc.asis('<input class="in create_p attr" id="pstr" placeholder="Strength">')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col dex', id='dex'):
+          text('Dexterity: ')
+          doc.asis('<input class="in create_p attr" id="pdex" placeholder="Dexterity">')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col const', id='const'):
+          text('Constitution: ')
+          doc.asis('<input class="in create_p attr" id="pconst" placeholder="Constitution">')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col intell', id='intell'):
+          text('Intelligence: ')
+          doc.asis('<input class="in create_p attr" id="pintell" placeholder="Intelligence">')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col wis', id='wis'):
+          text('Wisdom: ')
+          doc.asis('<input class="in create_p attr" id="pwis" placeholder="Wisdom">')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col char', id='char'):
+          text('Charisma: ')
+          doc.asis('<input class="in create_p attr" id="pchar" placeholder="Charisma">')
+    with tag('div', klass = 'col statbox'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col title'):
+          text('~ Stats ~')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col hp', id='hp'):
+          text("Hit Points: ")
+          doc.asis('<input class="in create_p attr" id="php" placeholder="Hit Points">')
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col wepbox', id='weps'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col title', id='show_wep'):
+          text('~ Weapons ~')
+        with tag('div', klass = 'col title', id='show_spell'):
+          text('~ Spells ~ (click to view)')
+      with tag('div', id='shown', klass='pweps'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col wepfields'):
+            text('Weapon')
+          with tag('div', klass = 'col wepfields'):
+            text('To Hit')
+          with tag('div', klass = 'col wepfields'):
+            text('Damage')
+          with tag('div', klass = 'col wepfields'):
+            text('Range')
+          with tag('div', klass = 'col wepfields'):
+            text('Notes')
+        with tag('div', klass = 'row', id="wep_but"):
+          # use element above to insert new weps
+          with tag('div', klass = 'col wepfields title'):
+            doc.asis('<button class="btn add_text add_table" id="add_wep">Add</button>')
+      with tag('div', id='hidden', klass='pspells'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col spellfields'):
+            text('Level')
+          with tag('div', klass = 'col spellfields'):
+            text('Spell')
+          with tag('div', klass = 'col spellfields'):
+            text('Cast Time')
+          with tag('div', klass = 'col spellfields'):
+            text('Range')
+          with tag('div', klass = 'col spellfields'):
+            text('Components + Duration')
+          with tag('div', klass = 'col spellfields'):
+            text('Attack/Save + Effect')
+        with tag('div', klass = 'row', id="spell_but"):
+          # use element above to insert new spells
+          with tag('div', klass = 'col spellfields title'):
+              doc.asis('<button class="btn add_text add_table" id="add_spell">Add</button>')
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col itembox'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col title'):
+          text('~ Items ~')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col itemfields'):
+          text('Name')
+        with tag('div', klass = 'col itemfields'):
+          text('Weight')
+        with tag('div', klass = 'col itemfields'):
+          text('Notes')
+      with tag('div', klass = 'row', id="item_but"):
+        # use element above to insert new items
+        with tag('div', klass = 'col itemfields title'):
+          doc.asis('<button class="btn add_text add_table" id="add_item">Add</button>')
+    with tag('div', klass = 'col treasbox'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col title'):
+          text('~ Treasures ~')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col treasfields', id='pp'):
+              text('PP: ')
+              doc.asis('<input class="in create_p attr" id="ppp" placeholder="PP">')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col treasfields', id='gp'):
+              text('GP: ')
+              doc.asis('<input class="in create_p attr" id="pgp" placeholder="GP">')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col treasfields', id='ep'):
+              text('EP: ')
+              doc.asis('<input class="in create_p attr" id="pep" placeholder="EP">')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col treasfields', id='sp'):
+              text('SP: ')
+              doc.asis('<input class="in create_p attr" id="psp" placeholder="SP">')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col treasfields', id='cp'):
+              text('CP: ')
+              doc.asis('<input class="in create_p attr" id="pcp" placeholder="CP">')
+        with tag('div', klass ='col', id='gems'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Gems ~')
+          with tag('div', klass = 'row', id="gem_but"):
+            # use element above to insert new gems
+            with tag('div', klass = 'col treasfields title'):
+              doc.asis('<button class="btn add_text new_gem" id="add_gem">Add</button>')
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col condbox'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col title'):
+          text('~ Condition/Speed ~')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col condfields', id='base_speed'):
+          text("Base Speed: ")
+          doc.asis('<input class="in create_p attr" id="pbase" placeholder="Base Speed">')
+        with tag('div', klass = 'col condfields', id='curr_speed'):
+          text("Current Speed: ")
+          doc.asis('<input class="in create_p attr" id="pcurr" placeholder="Current Speed">')
+  with tag('div', klass='row'):
+    with tag('div', klass = 'col submitbox title'):
+      doc.asis('<button class="btn but_sheet" id="sub_sheet">Create Sheet</button>')
+  resp = doc.getvalue()
+  return resp
+
 # helper to form sheet for player based on uname and room, can be either psheet or DM, retrieves from DB
 # turns into proper HTML format
-def get_player_stats(uname, isPlayer, room):
-  # build a dict of response stats (HARD CODED FOR TESTING)
+def get_player_stats(uname, isPlayer, room, raw_resp):
+  # use passed in JSON to build HTML
   if isPlayer:
-    raw_resp = {
-      'sheet_title': 'Test Sheet',
-      'name': 'Mikey',
-      'class': 'Necromancer',
-      'race': 'Dark Elf',
-      'align': 'Chaotic Good',
-      'ability-scores':
-        {'str': '74',
-        'dex': '56',
-        'const': '22',
-        'intell': '65',
-        'wis': '49',
-        'char': '33'},
-      'level': '8',
-      'xp': '300',
-      'languages':
-        ['Elvish', 'Dwarf'],
-      'enhan':
-        ['fat', 'cool', 'memes'],
-      'resist':
-        ['air', 'fire'],
-      'special':
-        ['Breathe water', 'fire breath'],
-      'armor': '29',
-      'hp': '350',
-      'hero': '15',
-      'weps':
-        [{'name': 'Greatsword', 'to_hit': '22',
-        'damage': '35', 'range': '12', 'notes': 'It sucks'},
-        {'name': 'Holy Bow', 'to_hit': '45',
-        'damage': '22', 'range': '65', 'notes': 'Will kill you'}],
-      'spells':
-        [{'name': 'Conjure Animals', 'level': '3rd', 'time': '1 Action', 'duration': 'Instantaneous',
-        'range': '90 ft', 'attack': 'Ranged', 'damage': 'Acid', 'components': 'V, S, M'},
-        {'name': 'Acid Arrow', 'level': '2nd', 'time': '1 Action', 'duration': '1 Hour',
-        'range': '60 ft', 'attack': 'None', 'damage': 'Summoning', 'components': 'V, S'}],
-      'items':
-        [{'name': 'special ring', 'weight': '8', 'notes': 'kills things'},
-        {'name': 'old book', 'weight': '12', 'notes': 'eerie...'}],
-      'base_speed': '30',
-      'curr_speed': '50',
-      'condition': 'fair',
-      'treasures':
-        {'gp': '32', 'cp': '22',
-        'pp': '0', 'ep': '20', 'sp': '0',
-        'gems': [{'name': 'rubies', 'num': '2'},
-          {'name': 'sapphires', 'num': '3'}]}
-    }
-    # use dict to build HTML using library
-    doc, tag, text= Doc().tagtext()
+    print('Im a player') # DEBUG
+    doc, tag, text = Doc().tagtext()
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col title'):
         text('~ Player Sheet ~')
+    with tag('div', klass = 'row'):
+      with tag('div', klass = 'col title'):
+        text(raw_resp['sheet_title'])
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col namebox'):
         with tag('div', klass = 'row'):
@@ -190,13 +444,13 @@ def get_player_stats(uname, isPlayer, room):
             text('Name: ' + raw_resp['name'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='class'):
-            text('Class: ' + raw_resp['class'])
+            text('Class: ' + class_abbrev[(raw_resp['class'])])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='race'):
-            text('Race: ' + raw_resp['race'])
+            text('Race: ' + race_abbrev[(raw_resp['race'])])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='align'):
-            text('Alignment: ' + raw_resp['align'])
+            text('Alignment: ' + align_abbrev[(raw_resp['align'])])
       with tag('div', klass = 'col levelbox'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col title'):
@@ -212,19 +466,31 @@ def get_player_stats(uname, isPlayer, room):
             text('Next Level Exp: ' + level_to_xp[(int(raw_resp['level']) + 1)])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='langs'):
-            text('Languages: ' + (', ').join(raw_resp['languages']))
+            if 'languages' in raw_resp.keys():
+              text('Languages: ' + (', ').join(raw_resp['languages']))
+            else:
+              text('Languages: ')
             doc.asis('<button class="btn add_text add_com" id="add_lang">Add</button>')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='condenhan'):
-            text('Conditions & Enchantments: ' + (', ').join(raw_resp['enhan']))
+            if 'enhan' in raw_resp.keys():
+              text('Conditions & Enchantments: ' + (', ').join(raw_resp['enhan']))
+            else:
+              text('Conditions & Enchantments: ')
             doc.asis('<button class="btn add_text add_com" id="add_cond">Add</button>')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='resist'):
-            text('Resistances: ' + (', ').join(raw_resp['resist']))
+            if 'resist' in raw_resp.keys():
+              text('Resistances: ' + (', ').join(raw_resp['resist']))
+            else:
+              text('Resistances: ')
             doc.asis('<button class="btn add_text add_com" id="add_resist">Add</button>')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='specs'):
-            text('Special Skills & Abilities: ' + (', ').join(raw_resp['special']))
+            if 'specs' in raw_resp.keys():
+              text('Special Skills & Abilities: ' + (', ').join(raw_resp['special']))
+            else:
+              text('Special Skills & Abilities: ')
             doc.asis('<button class="btn add_text add_com" id="add_spec">Add</button>')
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col attrbox'):
@@ -267,13 +533,11 @@ def get_player_stats(uname, isPlayer, room):
             text('~ Stats ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col armor', id='armor'):
-            text(raw_resp['armor'] + " Armor Class")
+            # armor = dex modifier + 10
+            text(str(modifier(raw_resp['ability-scores']['dex']) + 10) + " Armor Class")
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col hp', id='hp'):
             text(raw_resp['hp'] + " Hit Points")
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col hero', id='hero'):
-            text(raw_resp['hero'] + " Heroics")
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col wepbox', id='weps'):
         with tag('div', klass = 'row'):
@@ -293,18 +557,19 @@ def get_player_stats(uname, isPlayer, room):
               text('Range')
             with tag('div', klass = 'col wepfields'):
               text('Notes')
-          for weapon in raw_resp['weps']:
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col wepfields'):
-                text(weapon['name'])
-              with tag('div', klass = 'col wepfields'):
-                text(weapon['to_hit'])
-              with tag('div', klass = 'col wepfields'):
-                text(weapon['damage'])
-              with tag('div', klass = 'col wepfields'):
-                text(weapon['range'])
-              with tag('div', klass = 'col wepfields'):
-                text(weapon['notes'])
+            if 'weps' in raw_resp.keys():
+              for weapon in raw_resp['weps']:
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col wepfields'):
+                    text(weapon['name'])
+                  with tag('div', klass = 'col wepfields'):
+                    text(weapon['to_hit'])
+                  with tag('div', klass = 'col wepfields'):
+                    text(weapon['damage'])
+                  with tag('div', klass = 'col wepfields'):
+                    text(weapon['range'])
+                  with tag('div', klass = 'col wepfields'):
+                    text(weapon['notes'])
           with tag('div', klass = 'row', id="wep_but"):
             # use element above to insert new weps
             with tag('div', klass = 'col wepfields title'):
@@ -323,24 +588,25 @@ def get_player_stats(uname, isPlayer, room):
               text('Components + Duration')
             with tag('div', klass = 'col spellfields'):
               text('Attack/Save + Effect')
-          for spell in raw_resp['spells']:
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col spellfields'):
-                text(spell['level'])
-              with tag('div', klass = 'col spellfields'):
-                text(spell['name'])
-              with tag('div', klass = 'col spellfields'):
-                text(spell['time'])
-              with tag('div', klass = 'col spellfields'):
-                text(spell['range'])
-              with tag('div', klass = 'col spellfields'):
-                text(spell['components'] + ';')
-                doc.stag('br')
-                text(spell['duration'])
-              with tag('div', klass = 'col spellfields'):
-                text(spell['attack'] + ';')
-                doc.stag('br')
-                text(spell['damage'])
+          if 'spells' in raw_resp.keys():
+            for spell in raw_resp['spells']:
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col spellfields'):
+                  text(spell['level'])
+                with tag('div', klass = 'col spellfields'):
+                  text(spell['name'])
+                with tag('div', klass = 'col spellfields'):
+                  text(spell['time'])
+                with tag('div', klass = 'col spellfields'):
+                  text(spell['range'])
+                with tag('div', klass = 'col spellfields'):
+                  text(spell['components'] + ';')
+                  doc.stag('br')
+                  text(spell['duration'])
+                with tag('div', klass = 'col spellfields'):
+                  text(spell['attack'] + ';')
+                  doc.stag('br')
+                  text(spell['damage'])
           with tag('div', klass = 'row', id="spell_but"):
             # use element above to insert new spells
             with tag('div', klass = 'col spellfields title'):
@@ -357,14 +623,15 @@ def get_player_stats(uname, isPlayer, room):
             text('Weight')
           with tag('div', klass = 'col itemfields'):
             text('Notes')
-        for item in raw_resp['items']:
-          with tag('div', klass = 'row'):
-            with tag('div', klass = 'col itemfields'):
-              text(item['name'])
-            with tag('div', klass = 'col itemfields'):
-              text(item['weight'])
-            with tag('div', klass = 'col itemfields'):
-              text(item['notes'])
+        if 'items' in raw_resp.keys():  
+          for item in raw_resp['items']:
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col itemfields'):
+                text(item['name'])
+              with tag('div', klass = 'col itemfields'):
+                text(item['weight'])
+              with tag('div', klass = 'col itemfields'):
+                text(item['notes'])
         with tag('div', klass = 'row', id="item_but"):
           # use element above to insert new items
           with tag('div', klass = 'col itemfields title'):
@@ -373,7 +640,10 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col itemfields'):
             text('Total Weight Carried: ')
           with tag('div', klass = 'col itemfields', id='weight_total'):
-            text(sum(int(item['weight']) for item in raw_resp['items']))
+            if 'items' in raw_resp.keys():
+              text(sum(int(item['weight']) for item in raw_resp['items']))
+            else:
+              text('0')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col itemfields'):
             text('Max Carry Weight: ')
@@ -404,10 +674,11 @@ def get_player_stats(uname, isPlayer, room):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col title'):
                 text('~ Gems ~')
-            for gem in raw_resp['treasures']['gems']:
-              with tag('div', klass ='row'):
-                with tag('div', klass = 'col treasfields', id=gem['name']):
-                  text(gem['name'] + ": " + gem['num'])
+            if 'gems' in raw_resp['treasures'].keys():
+              for gem in raw_resp['treasures']['gems']:
+                with tag('div', klass ='row'):
+                  with tag('div', klass = 'col treasfields', id=gem['name']):
+                    text(gem['name'] + ": " + gem['num'])
             with tag('div', klass = 'row', id="gem_but"):
               # use element above to insert new gems
               with tag('div', klass = 'col treasfields title'):
@@ -423,7 +694,9 @@ def get_player_stats(uname, isPlayer, room):
           with tag('div', klass = 'col condfields', id='curr_speed'):
             text("Current Speed: " + raw_resp['curr_speed'])
           with tag('div', klass = 'col condfields', id='cond'):
-            text("Current Condition: " + raw_resp['condition'])
+            with tag('span', id='cond_text'):
+              text("Current Condition: " + raw_resp['condition'])
+              doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
 
   else:
     #fake response and probably wont have the same parameters as a real one
@@ -749,6 +1022,7 @@ def get_player_stats(uname, isPlayer, room):
             text('specific enemy info here')
 
   resp = doc.getvalue()
+  print('returning from get_stats')
   return raw_resp, resp # return both JSON and HTML for sending to JS
 
 # helper to determine what type of request based on header, form response
@@ -769,14 +1043,29 @@ def decide_request(req, uname, isPlayer, clients, room):
     resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
+    # also need to update sheet for leaving user, key = UID + title
+    title = req['msg']['sheet_title']
+    uid = uname
+    mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, 
+    req['msg'])
     remove_client(uname, room)
     resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
   elif req_type == 'get_sheet':
     # client asking for psheet OR DM info, depending on type, send requested info
     # include both formatted HTML and raw JSON
-    jsonstr, data = get_player_stats(uname, isPlayer, room)
+    # can be either grabbing from db or forming based on raw JSON
+    if 'title' in req.keys():
+      # title indicates retrieving from db, use UID as key
+      print('shouldnt be here lol')
+    else:
+      # raw JSON of sheet sent in message, store in db using UID as key
+      raw_sheet = req['msg']
+      raw_sheet['uid'] = uname # add name as key for retrieving document
+      mongo.db['psheets'].insert_one(raw_sheet)
+      # db.collection(u'psheets').add(raw_sheet)
+    jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
     if isPlayer:
-        resp = {'msg': data, 'raw': jsonstr, 'type': 'sheet', 'l2x': level_to_xp}
+        resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
     else:
         resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
   elif req_type == 'change_attr':
@@ -801,7 +1090,15 @@ def decide_request(req, uname, isPlayer, clients, room):
     # someone added either weapon, item, or spell
     resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
     '.', 'color': 'chocolate', 'type': 'status'}
-  return json.dumps(resp) # convert JSON to string
+  elif req_type == 'change_cond':
+    # someone has changed their condition
+    resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
+    '.', 'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'get_blank':
+    # player asking for blank html form to fill out
+    blank_form = get_sheet_form()
+    resp = {'msg': blank_form, 'type': 'create_psheet'}
+  return dumps(resp) # convert JSON to string
 
 
 
@@ -820,7 +1117,7 @@ def chat_socket(ws):
     isPlayer = session.get('isPlayer')
     global r_to_client
     global u_to_client
-    msg = json.loads(message) # convert to dict
+    msg = loads(message) # convert to dict
     # now process message dependent on type + room, clients
     clients = list(ws.handler.server.clients.values())
     room = session.get('room')
@@ -877,7 +1174,7 @@ def create_account():
     user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
     auth.send_email_verification(user['idToken'])
     newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
-    db.collection(u'user').add(newData)
+    #db.collection(u'user').add(newData)
 
     return redirect('/static/login.html', code=302)
 
