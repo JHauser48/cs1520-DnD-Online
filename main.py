@@ -300,7 +300,6 @@ def join_post():
   session['name'] = request.form['uname']
   session['room'] = request.form['rname']
   session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
-  session['u_token'] = 'temp' # will have to chagne after we require a login to enter a room
   return redirect(url_for('.play'), code=302)
 
 # disabling caching by modifying headers of each response
@@ -328,7 +327,7 @@ def login_account():
     user_token = user_acc['idToken']
     print(user_token)
     session['u_token'] = user_token
-    return 'you have logged in as ' + str(request.form['email'])
+    return redirect('/static/index.html', code=302)
   except:
     return 'something went wrong'
 
