@@ -209,6 +209,11 @@ input[type="radio"]{
   margin: auto;
 }
 
+.btn.choose_sheet {
+  font-size: 17px;
+  margin: 15px;
+}
+
 .in.add_text.add_gem {
   width: 70%;
 }
@@ -223,6 +228,13 @@ input[type="radio"]{
 
 .in.add_text.add_com {
   width: 70%;
+}
+
+.highlight {
+  font-weight: bolder;
+  font-size: 18px;
+  color: red;
+  margin: 7px;
 }
 
 .footer {

@@ -29,7 +29,7 @@ sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
 last_client = []            # use to store previous clients list, compare to track clients
-single_events = ['get_sheet', 'get_blank'] # track events where should only be sent to sender of event, i.e. not broadcast
+single_events = ['get_sheet', 'get_blank', 'load_sheets'] # track events where should only be sent to sender of event, i.e. not broadcast
 user_acc = ''
 user_token = ''
 
@@ -81,32 +81,6 @@ mod_stats = {
 }
 
 # map all abbreviated ids to full name for printing
-class_abbrev = {
-  'barb': 'Barbarian',
-  'bard': 'Bard',
-  'cleric': 'Cleric',
-  'druid': 'Druid',
-  'fight': 'Fighter',
-  'monk': 'Monk',
-  'pal': 'Paladin',
-  'ranger': 'Ranger',
-  'rogue': 'Rogue',
-  'sorc': 'Sorcerer',
-  'warl': 'Warlock',
-  'wiz': 'Wizard'
-}
-
-race_abbrev = {
-  'drag': 'Dragonborn',
-  'dwarf': 'Dwarf',
-  'elf': 'Elf',
-  'halfelf': 'Half-Elf',
-  'halfling': 'Halfling',
-  'halforc': 'Half-Orc',
-  'human': 'Human',
-  'tief': 'Tiefling'
-}
-
 align_abbrev = {
   'lg': 'Lawful Good',
   'ng': 'Neutral Good',
@@ -197,18 +171,25 @@ def decide_request(req, uname, isPlayer, clients, room):
     # can be either grabbing from db or forming based on raw JSON
     if 'title' in req.keys():
       # title indicates retrieving from db, use UID as key
-      print('shouldnt be here lol')
+      uid = uname
+      title = req['title']
+      # find requested sheet in DB
+      found_raw = mongo.db['psheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
+      jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
+      if isPlayer:
+        resp = {'msg': data, 'raw': found_raw, 'type': 'sheet', 'l2x': level_to_xp}
     else:
       # raw JSON of sheet sent in message, store in db using UID as key
       raw_sheet = req['msg']
-      raw_sheet['uid'] = session['u_token'] # add name as key for retrieving document
+      #raw_sheet['uid'] = session['u_token'] 
+      raw_sheet['uid'] = uname # TODO: CHANGE THIS TO THE SESSION
       mongo.db['psheets'].insert_one(raw_sheet)
       # db.collection(u'psheets').add(raw_sheet)
-    jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
-    if isPlayer:
-        resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
-    else:
-        resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
+      jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
+      if isPlayer:
+          resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
+      else:
+          resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
   elif req_type == 'change_attr':
     # someone changed a numeric attribute
     direction = 'increased' if req['dir'] else 'decreased'
@@ -239,6 +220,12 @@ def decide_request(req, uname, isPlayer, clients, room):
     # player asking for blank html form to fill out
     blank_form = get_sheet_form()
     resp = {'msg': blank_form, 'type': 'create_psheet'}
+  elif req_type == 'load_sheets':
+    # player asking for list of their sheets, get from DB
+    #uid = session['u_token'] 
+    uid = uname # TODO: CHANGE THIS TO SESSION
+    all_sheets = dumps(mongo.db['psheets'].find({'uid': uid})) # store list of all sheets
+    resp = {'msg': all_sheets, 'type': 'sheet_list'}
   return dumps(resp) # convert JSON to string
 
 
@@ -353,51 +340,11 @@ def get_sheet_form():
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='class'):
           text('Class: ')
-          with tag('select', klass='sel create_p', id="pclass"):
-            with tag('option', value='barb'):
-              text('Barbarian')
-            with tag('option', value='bard'):
-              text('Bard')
-            with tag('option', value='cleric'):
-              text('Cleric')
-            with tag('option', value='druid'):
-              text('Druid')
-            with tag('option', value='fight'):
-              text('Fighter')
-            with tag('option', value='monk'):
-              text('Monk')
-            with tag('option', value='pal'):
-              text('Paladin')
-            with tag('option', value='ranger'):
-              text('Ranger')
-            with tag('option', value='rogue'):
-              text('Rogue')
-            with tag('option', value='sorc'):
-              text('Sorcerer')
-            with tag('option', value='warl'):
-              text('Warlock')
-            with tag('option', value='wiz'):
-              text('Wizard')
+          doc.asis('<input class="in create_p" id="pclass" placeholder="Class">')
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='race'):
           text('Race: ')
-          with tag('select', klass='sel create_p', id="prace"):
-            with tag('option', value='drag'):
-              text('Dragonborn')
-            with tag('option', value='dwarf'):
-              text('Dwarf')
-            with tag('option', value='elf'):
-              text('Elf')
-            with tag('option', value='halfelf'):
-              text('Half-Elf')
-            with tag('option', value='halfling'):
-              text('Halfling')
-            with tag('option', value='halforc'):
-              text('Half-Orc')
-            with tag('option', value='human'):
-              text('Human')
-            with tag('option', value='tief'):
-              text('Tiefling')
+          doc.asis('<input class="in create_p" id="prace" placeholder="Race">')
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='align'):
           text('Alignment: ')
@@ -609,10 +556,10 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('Name: ' + raw_resp['name'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='class'):
-            text('Class: ' + class_abbrev[(raw_resp['class'])])
+            text('Class: ' + raw_resp['class'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='race'):
-            text('Race: ' + race_abbrev[(raw_resp['race'])])
+            text('Race: ' + raw_resp['race'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='align'):
             text('Alignment: ' + align_abbrev[(raw_resp['align'])])
@@ -622,10 +569,10 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Level/XP ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='level'):
-            text('Level: ' + raw_resp['level'])
+            text('Level: ' + str(raw_resp['level']))
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='xp'):
-            text('Experience Points: ' + raw_resp['xp'])
+            text('Experience Points: ' + str(raw_resp['xp']))
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='next_xp'):
             text('Next Level Exp: ' + level_to_xp[(int(raw_resp['level']) + 1)])
@@ -664,32 +611,32 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Ability Scores ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col str', id='str'):
-            text(raw_resp['ability-scores']['str'] + ' Strength')
+            text(str(raw_resp['ability-scores']['str']) + ' Strength')
           with tag('div', klass = 'col str', id='str_mod'):
             text(str(modifier(raw_resp['ability-scores']['str'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col dex', id='dex'):
-            text(raw_resp['ability-scores']['dex'] + ' Dexterity')
+            text(str(raw_resp['ability-scores']['dex']) + ' Dexterity')
           with tag('div', klass = 'col str', id='dex_mod'):
             text(str(modifier(raw_resp['ability-scores']['dex'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col const', id='const'):
-            text(raw_resp['ability-scores']['const'] + ' Constitution')
+            text(str(raw_resp['ability-scores']['const']) + ' Constitution')
           with tag('div', klass = 'col str', id='const_mod'):
             text(str(modifier(raw_resp['ability-scores']['const'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col intell', id='intell'):
-            text(raw_resp['ability-scores']['intell'] + ' Intelligence')
+            text(str(raw_resp['ability-scores']['intell']) + ' Intelligence')
           with tag('div', klass = 'col str', id='intell_mod'):
             text(str(modifier(raw_resp['ability-scores']['intell'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col wis', id='wis'):
-            text(raw_resp['ability-scores']['wis'] + ' Wisdom')
+            text(str(raw_resp['ability-scores']['wis']) + ' Wisdom')
           with tag('div', klass = 'col str', id='wis_mod'):
             text(str(modifier(raw_resp['ability-scores']['wis'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col char', id='char'):
-            text(raw_resp['ability-scores']['char'] + ' Charisma')
+            text(str(raw_resp['ability-scores']['char']) + ' Charisma')
           with tag('div', klass = 'col str', id='char_mod'):
             text(str(modifier(raw_resp['ability-scores']['char'])) + ' Modifier')
       with tag('div', klass = 'col statbox'):
@@ -702,7 +649,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text(str(modifier(raw_resp['ability-scores']['dex']) + 10) + " Armor Class")
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col hp', id='hp'):
-            text(raw_resp['hp'] + " Hit Points")
+            text(str(raw_resp['hp']) + " Hit Points")
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col wepbox', id='weps'):
         with tag('div', klass = 'row'):
@@ -822,19 +769,19 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
           with tag('div', klass = 'col'):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='pp'):
-                text('PP: ' + raw_resp['treasures']['pp'])
+                text('PP: ' + str(raw_resp['treasures']['pp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='gp'):
-                text('GP: ' + raw_resp['treasures']['gp'])
+                text('GP: ' + str(raw_resp['treasures']['gp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='ep'):
-                text('EP: ' + raw_resp['treasures']['ep'])
+                text('EP: ' + str(raw_resp['treasures']['ep']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='sp'):
-                text('SP: ' + raw_resp['treasures']['sp'])
+                text('SP: ' + str(raw_resp['treasures']['sp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='cp'):
-                text('CP: ' + raw_resp['treasures']['cp'])
+                text('CP: ' + str(raw_resp['treasures']['cp']))
           with tag('div', klass ='col', id='gems'):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col title'):
@@ -843,7 +790,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
               for gem in raw_resp['treasures']['gems']:
                 with tag('div', klass ='row'):
                   with tag('div', klass = 'col treasfields', id=gem['name']):
-                    text(gem['name'] + ": " + gem['num'])
+                    text(gem['name'] + ": " + str(gem['num']))
             with tag('div', klass = 'row', id="gem_but"):
               # use element above to insert new gems
               with tag('div', klass = 'col treasfields title'):
@@ -855,13 +802,13 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Condition/Speed ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col condfields', id='base_speed'):
-            text("Base Speed: " + raw_resp['base_speed'])
+            text("Base Speed: " + str(raw_resp['base_speed']))
           with tag('div', klass = 'col condfields', id='curr_speed'):
-            text("Current Speed: " + raw_resp['curr_speed'])
+            text("Current Speed: " + str(raw_resp['curr_speed']))
           with tag('div', klass = 'col condfields', id='cond'):
             with tag('span', id='cond_text'):
               text("Current Condition: " + raw_resp['condition'])
-              doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
+            doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
 
   else:
     #fake response and probably wont have the same parameters as a real one
