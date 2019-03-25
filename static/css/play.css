@@ -100,6 +100,7 @@ body{
 }
 
 #dmstuff{
+    display: none;
     float: left;
     background-color: rgba(56, 48, 9, 0.966);
     color: rgba(163, 163, 163, 0.966);
@@ -127,11 +128,16 @@ body{
   height: 100%;
 }
 
-#newMonsterTextField{
+.newMonsterTextField{
   width: 100%;
 }
 
-#newMonsterHD{
+.newMonsterTextArea{
+  width: 100%;
+  rows: 2;
+}
+
+.newMonsterHD{
   width: 45%;
 }
 
@@ -205,6 +211,11 @@ input[type="radio"]{
 }
 
 .btn.but_sheet {
+  font-size: 20px;
+  margin: auto;
+}
+
+.btn.but_dm {
   font-size: 20px;
   margin: auto;
 }
