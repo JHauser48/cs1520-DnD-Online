@@ -294,7 +294,7 @@ def chat_socket(ws):
 
 @app.route('/')
 def root():
-    return redirect("/static/index.html", code=302)
+    return redirect("/static/login.html", code=302)
 
 @app.route('/play')
 def play():
