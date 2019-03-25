@@ -273,7 +273,7 @@ $(document).ready(function(){
           //now when user submits sheet, must validate input, form JSON, send to server
           $('#sub_sheet').click(function() {
             var req_fields = {};      //dict of all required fields use for checking
-            let req_list = ['ptitle', 'pname', 'pstr', 'pdex', 'pconst', 'pintell', 'pwis',
+            let req_list = ['ptitle', 'pname', 'pclass', 'prace', 'pstr', 'pdex', 'pconst', 'pintell', 'pwis',
             'pchar', 'php', 'ppp', 'pgp', 'pep', 'psp', 'pcp', 'pbase', 'pcurr'];
             req_list.forEach((req) => {
               req_fields[req] = $('#' + req).val();
@@ -289,9 +289,11 @@ $(document).ready(function(){
               }
             });
             if (empty)      return;     //empty
-            //now ensure fields that must be non-negative numbers are (i.e. all except name, speeds, title)
+            //now ensure fields that must be non-negative numbers are (i.e. all except name,
+            //class, racespeeds, title)
             Object.keys(req_fields).forEach((key) => {
-              if (key != 'pname' && key != 'pbase' && key != 'pcurr' && key != 'ptitle') {
+              if (key != 'pname' && key != 'pbase' && key != 'pcurr' && key != 'ptitle' &&
+                  key != 'pclass' && key != 'prace') {
                 if (!(/^\+?\d+$/.test(req_fields[key]))) {
                   empty = true;
                   $('#' + key)[0].setCustomValidity("Field must a non-negative Integer");
@@ -309,8 +311,8 @@ $(document).ready(function(){
             //now that input validation is done, we can start storing attrs in JSON
             sheet_obj['sheet_title'] = req_fields['ptitle'];
             sheet_obj['name'] = req_fields['pname'];
-            sheet_obj['class'] = $('#pclass').val();
-            sheet_obj['race'] = $('#prace').val();
+            sheet_obj['class'] = req_fields['pclass'];
+            sheet_obj['race'] = req_fields['prace'];
             sheet_obj['align'] = $('#palign').val();
             sheet_obj['ability-scores'] = {};
             sheet_obj['ability-scores']['str'] = req_fields['pstr'];
@@ -335,6 +337,31 @@ $(document).ready(function(){
             sheet_obj['treasures']['sp'] = req_fields['psp'];
             //now send to server to build
             let msg = JSON.stringify({type: 'get_sheet', msg: sheet_obj});
+            socket.send(msg);
+          });
+          break;
+        case 'sheet_list':
+          //server has sent us list of our saved sheets, must display
+          $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load
+          sheet.css('display', 'inline-block');    //unhide sheet
+          //form html row for each psheet, displaying title, character name, and choose button
+          var all_sheets = '';
+          let curr_msg = JSON.parse(data.msg);
+          console.log(curr_msg);     //DEBUG
+          console.log(typeof(curr_msg));
+          curr_msg.forEach((save_sheet) => {
+            all_sheets += `<div class="row"><div class="col title">`+
+            `Sheet: <span class="highlight">${save_sheet.sheet_title}</span> Character Name: ` +
+            `<span class="highlight">${save_sheet.name}</span>` +
+            `<button class="btn choose_sheet" id="${save_sheet.sheet_title}">Choose</button>`+
+            `</div></div>`;
+          });
+          sheet.html(all_sheets);       //display saved sheets for picking
+          //register handler for user choosing a sheet
+          $('.btn.choose_sheet').click(function() {
+            let chosen_sheet = this.id;       //sheet title == id of button
+            //send message to server asking for sheet
+            let msg = JSON.stringify({type: 'get_sheet', title: chosen_sheet});
             socket.send(msg);
           });
           break;
@@ -1348,7 +1375,7 @@ $(document).ready(function(){
       adv = $('#adv:checked').val() == "on" ? 1 : 0;
       disadv = $('#disadv:checked').val() == "on" ? 1 : 0;
       mod = $('#modifier').val();
-      mod_val = mod != "none" ? raw_sheet[mod] : 0;
+      mod_val = mod != "none" ? raw_sheet['ability-scores'][mod] : 0;
       // create string from type appended with dice info
       let msg = JSON.stringify({type: 'dice_roll', dice_type: $('#dice_list').val(), modifier: mod, modifier_value: mod_val, adv: adv, disadv: disadv});
       socket.send(msg);
@@ -1440,7 +1467,6 @@ $(document).ready(function(){
           $('#' + attr + '_mod').html(curr_mod);
           break;
         case 'hp':
-        case 'hero':
         case 'curr_speed':
           curr = Number(raw_sheet[attr]); //retrieve current value
           if (add_type){
@@ -1525,10 +1551,10 @@ $(document).ready(function(){
       socket.send(msg);
     });
 
-    //handle if user wants to create a new dmsheet, get HTML of form from server
-    $('#new_dm').click(function() {
-      //ask for blank html to fill out
-      let msg = JSON.stringify({type: 'get_blank'});
+    //handle if user wants to load a saved psheet, must ask server to load list of all
+    $('#load_sheet').click(function() {
+      //ask for list of all sheets owned by user
+      let msg = JSON.stringify({type: 'load_sheets'});
       socket.send(msg);
     });
 

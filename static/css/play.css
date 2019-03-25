@@ -215,9 +215,9 @@ input[type="radio"]{
   margin: auto;
 }
 
-.btn.but_dm {
-  font-size: 20px;
-  margin: auto;
+.btn.choose_sheet {
+  font-size: 17px;
+  margin: 15px;
 }
 
 .in.add_text.add_gem {
@@ -234,6 +234,13 @@ input[type="radio"]{
 
 .in.add_text.add_com {
   width: 70%;
+}
+
+.highlight {
+  font-weight: bolder;
+  font-size: 18px;
+  color: red;
+  margin: 7px;
 }
 
 .footer {

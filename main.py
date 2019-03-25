@@ -29,7 +29,10 @@ sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
 last_client = []            # use to store previous clients list, compare to track clients
-single_events = ['get_sheet', 'get_blank'] # track events where should only be sent to sender of event, i.e. not broadcast
+single_events = ['get_sheet', 'get_blank', 'load_sheets'] # track events where should only be sent to sender of event, i.e. not broadcast
+user_acc = ''
+user_token = ''
+
 # map level to amount of XP needed
 level_to_xp = {
   2: '300',
@@ -55,13 +58,13 @@ level_to_xp = {
 
 # for both mods and figuring out attr changed
 mod_stats = {
-  'none' : 'None',
-  'str' : 'Strength',
-  'const' : 'Constitution',
-  'dex' : 'Dexterity',
-  'intell' : 'Intelligence',
-  'wis' : 'Wisdom',
-  'char' : 'Charisma',
+  'none': 'None',
+  'str': 'Strength',
+  'const': 'Constitution',
+  'dex': 'Dexterity',
+  'intell': 'Intelligence',
+  'wis': 'Wisdom',
+  'char': 'Charisma',
   'hp': 'Hit Points',
   'xp': 'Experience Points',
   'hero': 'Heroics',
@@ -78,32 +81,6 @@ mod_stats = {
 }
 
 # map all abbreviated ids to full name for printing
-class_abbrev = {
-  'barb': 'Barbarian',
-  'bard': 'Bard',
-  'cleric': 'Cleric',
-  'druid': 'Druid',
-  'fight': 'Fighter',
-  'monk': 'Monk',
-  'pal': 'Paladin',
-  'ranger': 'Ranger',
-  'rogue': 'Rogue',
-  'sorc': 'Sorcerer',
-  'warl': 'Warlock',
-  'wiz': 'Wizard'
-}
-
-race_abbrev = {
-  'drag': 'Dragonborn',
-  'dwarf': 'Dwarf',
-  'elf': 'Elf',
-  'halfelf': 'Half-Elf',
-  'halfling': 'Halfling',
-  'halforc': 'Half-Orc',
-  'human': 'Human',
-  'tief': 'Tiefling'
-}
-
 align_abbrev = {
   'lg': 'Lawful Good',
   'ng': 'Neutral Good',
@@ -115,9 +92,6 @@ align_abbrev = {
   'ne': 'Neutral Evil',
   'ce': 'Chaotic Evil'
 }
-
-#class PlayerStats(db.Model):
-  #__tablename__ = 'pstats'
 
 # helper to roll dice, takes dice type and adv/disadv attributes
 def roll_dice(size, mod, mod_v, adv, dis, uname):
@@ -166,6 +140,184 @@ def remove_client(uname, room):
   if to_rem in last_client:
     last_client.remove(to_rem)  # client gone
 
+# helper to determine what type of request based on header, form response
+def decide_request(req, uname, isPlayer, clients, room):
+  resp = ""
+  req_type = req['type']
+  if req_type == 'enter':
+    # person has joined room, must take difference of new clients list and old
+    # use to track person in room
+    add_client(clients, room, uname)
+    resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status'}
+  elif req_type == 'text':
+    # someone is sending a message
+    resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
+  elif req_type == 'dice_roll':
+    # someone is asking for dice rolls
+    msg = roll_dice(int(req['dice_type']),req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname)
+    resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
+  elif req_type == 'leave':
+    # someone leaving the room, remove from room client list to avoid issues, print status
+    # also need to update sheet for leaving user, key = UID + title
+    title = req['msg']['sheet_title']
+    uid = uname
+    mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]},
+    req['msg'])
+    remove_client(uname, room)
+    resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
+  elif req_type == 'get_sheet':
+    # client asking for psheet OR DM info, depending on type, send requested info
+    # include both formatted HTML and raw JSON
+    # can be either grabbing from db or forming based on raw JSON
+    if 'title' in req.keys():
+      # title indicates retrieving from db, use UID as key
+      uid = uname
+      title = req['title']
+      # find requested sheet in DB
+      found_raw = mongo.db['psheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
+      jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
+      if isPlayer:
+        resp = {'msg': data, 'raw': found_raw, 'type': 'sheet', 'l2x': level_to_xp}
+    else:
+      # raw JSON of sheet sent in message, store in db using UID as key
+      raw_sheet = req['msg']
+      #raw_sheet['uid'] = session['u_token']
+      raw_sheet['uid'] = uname # TODO: CHANGE THIS TO THE SESSION
+      mongo.db['psheets'].insert_one(raw_sheet)
+      # db.collection(u'psheets').add(raw_sheet)
+      jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
+      if isPlayer:
+          resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
+      else:
+          resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
+  elif req_type == 'change_attr':
+    # someone changed a numeric attribute
+    direction = 'increased' if req['dir'] else 'decreased'
+    lvl_up = ' Level Up!!!' if req['lvl'] else ''
+    # keep same if not shortened version (should only be gems)
+    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
+    resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' +
+    str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up,
+    'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'change_text':
+    # someone has added to textual attribute
+    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
+    resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.',
+    'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'add_gem':
+    # someone has added new gems
+    resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) +
+    ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'add_item':
+    # someone added either weapon, item, or spell
+    resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
+    '.', 'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'change_cond':
+    # someone has changed their condition
+    resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
+    '.', 'color': 'chocolate', 'type': 'status'}
+  elif req_type == 'get_blank':
+    # player asking for blank html form to fill out
+    blank_form = get_sheet_form()
+    resp = {'msg': blank_form, 'type': 'create_psheet'}
+  elif req_type == 'load_sheets':
+    # player asking for list of their sheets, get from DB
+    #uid = session['u_token']
+    uid = uname # TODO: CHANGE THIS TO SESSION
+    all_sheets = dumps(mongo.db['psheets'].find({'uid': uid})) # store list of all sheets
+    resp = {'msg': all_sheets, 'type': 'sheet_list'}
+  return dumps(resp) # convert JSON to string
+
+
+###############################################
+# begin listening for different socket events #
+###############################################
+
+# on client sending socket message, process request and decide how to form response
+@sockets.route('/play')
+def chat_socket(ws):
+  # while socket is open, process messages
+  while not ws.closed:
+    message = ws.receive()
+    if message is None:  # message is "None" if the client has closed.
+      continue
+    # store name of sender
+    uname = session.get('name')
+    isPlayer = session.get('isPlayer')
+    global r_to_client
+    global u_to_client
+    msg = loads(message) # convert to dict
+    # now process message dependent on type + room, clients
+    clients = list(ws.handler.server.clients.values())
+    room = session.get('room')
+    resp = decide_request(msg, uname, isPlayer, clients, room)
+    # check if broadcast or single event
+    broadcast = True if msg['type'] not in single_events else False
+    # send response to every one in sender's room if broadcast
+    if broadcast:
+      for client in r_to_client[room]:
+        print("sending")
+        print(resp)
+        client.ws.send(resp)
+    else:
+      # otherwise only to sender of event
+      curr = u_to_client[uname]
+      print("sending")
+      print(resp)
+      curr.ws.send(resp)
+
+
+@app.route('/')
+def root():
+    return redirect("/static/index.html", code=302)
+
+@app.route('/play')
+def play():
+    #print ('in play\n')
+    room = session.get('room')
+    name = session.get('name')
+    isPlayer = session.get('isPlayer')
+    return render_template('play.html', room=room, name=name, isPlayer=isPlayer)
+
+#post to join room, store session data for user
+# redirect them to play url
+@app.route('/joinRoom', methods=['POST'])
+def join_post():
+  # store session info for use
+  session['name'] = request.form['uname']
+  session['room'] = request.form['rname']
+  session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
+  return redirect(url_for('.play'), code=302)
+
+# disabling caching by modifying headers of each response
+@app.after_request
+def add_header(resp):
+  resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+  resp.headers['Pragma'] = 'no-cache'
+  resp.headers['Expires'] = '0'
+  return resp
+
+@app.route('/create', methods=['POST'])
+def create_account():
+  try:
+    user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
+    auth.send_email_verification(user['idToken'])
+    newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
+    return redirect('/static/login.html', code=302)
+  except:
+    return redirect('/static/create.html', code=302)
+
+@app.route('/login', methods=['POST'])
+def login_account():
+  try:
+    user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
+    user_token = user_acc['idToken']
+    print(user_token)
+    session['u_token'] = user_token
+    return redirect('/static/index.html', code=302)
+  except:
+    return 'something went wrong'
+
 # helper to build HTML for user creating new sheet
 def get_sheet_form():
   doc, tag, text= Doc().tagtext()
@@ -188,51 +340,11 @@ def get_sheet_form():
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='class'):
           text('Class: ')
-          with tag('select', klass='sel create_p', id="pclass"):
-            with tag('option', value='barb'):
-              text('Barbarian')
-            with tag('option', value='bard'):
-              text('Bard')
-            with tag('option', value='cleric'):
-              text('Cleric')
-            with tag('option', value='druid'):
-              text('Druid')
-            with tag('option', value='fight'):
-              text('Fighter')
-            with tag('option', value='monk'):
-              text('Monk')
-            with tag('option', value='pal'):
-              text('Paladin')
-            with tag('option', value='ranger'):
-              text('Ranger')
-            with tag('option', value='rogue'):
-              text('Rogue')
-            with tag('option', value='sorc'):
-              text('Sorcerer')
-            with tag('option', value='warl'):
-              text('Warlock')
-            with tag('option', value='wiz'):
-              text('Wizard')
+          doc.asis('<input class="in create_p" id="pclass" placeholder="Class">')
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='race'):
           text('Race: ')
-          with tag('select', klass='sel create_p', id="prace"):
-            with tag('option', value='drag'):
-              text('Dragonborn')
-            with tag('option', value='dwarf'):
-              text('Dwarf')
-            with tag('option', value='elf'):
-              text('Elf')
-            with tag('option', value='halfelf'):
-              text('Half-Elf')
-            with tag('option', value='halfling'):
-              text('Halfling')
-            with tag('option', value='halforc'):
-              text('Half-Orc')
-            with tag('option', value='human'):
-              text('Human')
-            with tag('option', value='tief'):
-              text('Tiefling')
+          doc.asis('<input class="in create_p" id="prace" placeholder="Race">')
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='align'):
           text('Alignment: ')
@@ -444,10 +556,10 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('Name: ' + raw_resp['name'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='class'):
-            text('Class: ' + class_abbrev[(raw_resp['class'])])
+            text('Class: ' + raw_resp['class'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='race'):
-            text('Race: ' + race_abbrev[(raw_resp['race'])])
+            text('Race: ' + raw_resp['race'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='align'):
             text('Alignment: ' + align_abbrev[(raw_resp['align'])])
@@ -457,10 +569,10 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Level/XP ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='level'):
-            text('Level: ' + raw_resp['level'])
+            text('Level: ' + str(raw_resp['level']))
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='xp'):
-            text('Experience Points: ' + raw_resp['xp'])
+            text('Experience Points: ' + str(raw_resp['xp']))
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='next_xp'):
             text('Next Level Exp: ' + level_to_xp[(int(raw_resp['level']) + 1)])
@@ -499,32 +611,32 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Ability Scores ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col str', id='str'):
-            text(raw_resp['ability-scores']['str'] + ' Strength')
+            text(str(raw_resp['ability-scores']['str']) + ' Strength')
           with tag('div', klass = 'col str', id='str_mod'):
             text(str(modifier(raw_resp['ability-scores']['str'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col dex', id='dex'):
-            text(raw_resp['ability-scores']['dex'] + ' Dexterity')
+            text(str(raw_resp['ability-scores']['dex']) + ' Dexterity')
           with tag('div', klass = 'col str', id='dex_mod'):
             text(str(modifier(raw_resp['ability-scores']['dex'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col const', id='const'):
-            text(raw_resp['ability-scores']['const'] + ' Constitution')
+            text(str(raw_resp['ability-scores']['const']) + ' Constitution')
           with tag('div', klass = 'col str', id='const_mod'):
             text(str(modifier(raw_resp['ability-scores']['const'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col intell', id='intell'):
-            text(raw_resp['ability-scores']['intell'] + ' Intelligence')
+            text(str(raw_resp['ability-scores']['intell']) + ' Intelligence')
           with tag('div', klass = 'col str', id='intell_mod'):
             text(str(modifier(raw_resp['ability-scores']['intell'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col wis', id='wis'):
-            text(raw_resp['ability-scores']['wis'] + ' Wisdom')
+            text(str(raw_resp['ability-scores']['wis']) + ' Wisdom')
           with tag('div', klass = 'col str', id='wis_mod'):
             text(str(modifier(raw_resp['ability-scores']['wis'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col char', id='char'):
-            text(raw_resp['ability-scores']['char'] + ' Charisma')
+            text(str(raw_resp['ability-scores']['char']) + ' Charisma')
           with tag('div', klass = 'col str', id='char_mod'):
             text(str(modifier(raw_resp['ability-scores']['char'])) + ' Modifier')
       with tag('div', klass = 'col statbox'):
@@ -537,7 +649,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text(str(modifier(raw_resp['ability-scores']['dex']) + 10) + " Armor Class")
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col hp', id='hp'):
-            text(raw_resp['hp'] + " Hit Points")
+            text(str(raw_resp['hp']) + " Hit Points")
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col wepbox', id='weps'):
         with tag('div', klass = 'row'):
@@ -657,19 +769,19 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
           with tag('div', klass = 'col'):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='pp'):
-                text('PP: ' + raw_resp['treasures']['pp'])
+                text('PP: ' + str(raw_resp['treasures']['pp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='gp'):
-                text('GP: ' + raw_resp['treasures']['gp'])
+                text('GP: ' + str(raw_resp['treasures']['gp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='ep'):
-                text('EP: ' + raw_resp['treasures']['ep'])
+                text('EP: ' + str(raw_resp['treasures']['ep']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='sp'):
-                text('SP: ' + raw_resp['treasures']['sp'])
+                text('SP: ' + str(raw_resp['treasures']['sp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='cp'):
-                text('CP: ' + raw_resp['treasures']['cp'])
+                text('CP: ' + str(raw_resp['treasures']['cp']))
           with tag('div', klass ='col', id='gems'):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col title'):
@@ -678,7 +790,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
               for gem in raw_resp['treasures']['gems']:
                 with tag('div', klass ='row'):
                   with tag('div', klass = 'col treasfields', id=gem['name']):
-                    text(gem['name'] + ": " + gem['num'])
+                    text(gem['name'] + ": " + str(gem['num']))
             with tag('div', klass = 'row', id="gem_but"):
               # use element above to insert new gems
               with tag('div', klass = 'col treasfields title'):
@@ -690,13 +802,13 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Condition/Speed ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col condfields', id='base_speed'):
-            text("Base Speed: " + raw_resp['base_speed'])
+            text("Base Speed: " + str(raw_resp['base_speed']))
           with tag('div', klass = 'col condfields', id='curr_speed'):
-            text("Current Speed: " + raw_resp['curr_speed'])
+            text("Current Speed: " + str(raw_resp['curr_speed']))
           with tag('div', klass = 'col condfields', id='cond'):
             with tag('span', id='cond_text'):
               text("Current Condition: " + raw_resp['condition'])
-              doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
+            doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
 
   else:
     #fake response and probably wont have the same parameters as a real one
@@ -1154,173 +1266,6 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
   resp = doc.getvalue()
   print('returning from get_stats')
   return raw_resp, resp # return both JSON and HTML for sending to JS
-
-# helper to determine what type of request based on header, form response
-def decide_request(req, uname, isPlayer, clients, room):
-  resp = ""
-  req_type = req['type']
-  if req_type == 'enter':
-    # person has joined room, must take difference of new clients list and old
-    # use to track person in room
-    add_client(clients, room, uname)
-    resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status'}
-  elif req_type == 'text':
-    # someone is sending a message
-    resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
-  elif req_type == 'dice_roll':
-    # someone is asking for dice rolls
-    msg = roll_dice(int(req['dice_type']),req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname)
-    resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
-  elif req_type == 'leave':
-    # someone leaving the room, remove from room client list to avoid issues, print status
-    # also need to update sheet for leaving user, key = UID + title
-    title = req['msg']['sheet_title']
-    uid = uname
-    mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]},
-    req['msg'])
-    remove_client(uname, room)
-    resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
-  elif req_type == 'get_sheet':
-    # client asking for psheet OR DM info, depending on type, send requested info
-    # include both formatted HTML and raw JSON
-    # can be either grabbing from db or forming based on raw JSON
-    if 'title' in req.keys():
-      # title indicates retrieving from db, use UID as key
-      print('shouldnt be here lol')
-    else:
-      # raw JSON of sheet sent in message, store in db using UID as key
-      raw_sheet = req['msg']
-      raw_sheet['uid'] = uname # add name as key for retrieving document
-      mongo.db['psheets'].insert_one(raw_sheet)
-      # db.collection(u'psheets').add(raw_sheet)
-    jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
-    if isPlayer:
-        resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
-    else:
-        resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
-  elif req_type == 'change_attr':
-    # someone changed a numeric attribute
-    direction = 'increased' if req['dir'] else 'decreased'
-    lvl_up = ' Level Up!!!' if req['lvl'] else ''
-    # keep same if not shortened version (should only be gems)
-    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
-    resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' +
-    str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up,
-    'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'change_text':
-    # someone has added to textual attribute
-    attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
-    resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.',
-    'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'add_gem':
-    # someone has added new gems
-    resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) +
-    ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'add_item':
-    # someone added either weapon, item, or spell
-    resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
-    '.', 'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'change_cond':
-    # someone has changed their condition
-    resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
-    '.', 'color': 'chocolate', 'type': 'status'}
-  elif req_type == 'get_blank':
-    if isPlayer:
-      # player asking for blank html form to fill out
-      blank_form = get_sheet_form()
-      resp = {'msg': blank_form, 'type': 'create_psheet'}
-    else:
-      blank_resp = {
-        'notes' : '',
-        'monsters' : {},
-        'encounter' : {
-          'monsters':[],
-          'turnorder':[]
-        }
-      }
-      raw, blank_form = get_player_stats(uname, isPlayer, room, blank_resp)
-      resp = {'msg': blank_form, 'raw': raw, 'type': 'dmstuff'}
-  return dumps(resp) # convert JSON to string
-
-
-
-# begin listening for different socket events
-
-# on client sending socket message, process request and decide how to form response
-@sockets.route('/play')
-def chat_socket(ws):
-  # while socket is open, process messages
-  while not ws.closed:
-    message = ws.receive()
-    if message is None:  # message is "None" if the client has closed.
-      continue
-    # store name of sender
-    uname = session.get('name')
-    isPlayer = session.get('isPlayer')
-    global r_to_client
-    global u_to_client
-    msg = loads(message) # convert to dict
-    # now process message dependent on type + room, clients
-    clients = list(ws.handler.server.clients.values())
-    room = session.get('room')
-    resp = decide_request(msg, uname, isPlayer, clients, room)
-    # check if broadcast or single event
-    broadcast = True if msg['type'] not in single_events else False
-    # send response to every one in sender's room if broadcast
-    if broadcast:
-      for client in r_to_client[room]:
-        print("sending")
-        print(resp)
-        client.ws.send(resp)
-    else:
-      # otherwise only to sender of event
-      curr = u_to_client[uname]
-      print("sending")
-      print(resp)
-      curr.ws.send(resp)
-
-
-@app.route('/')
-def root():
-    return redirect("/static/index.html", code=302)
-
-@app.route('/play')
-def play():
-    #print ('in play\n')
-    room = session.get('room')
-    name = session.get('name')
-    isPlayer = session.get('isPlayer')
-    return render_template('play.html', room=room, name=name, isPlayer=isPlayer)
-
-#post to join room, store session data for user
-# redirect them to play url
-@app.route('/joinRoom', methods=['POST'])
-def join_post():
-  # store session info for use
-  session['name'] = request.form['uname']
-  session['room'] = request.form['rname']
-  session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
-  return redirect(url_for('.play'), code=302)
-
-# disabling caching by modifying headers of each response
-@app.after_request
-def add_header(resp):
-  resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-  resp.headers['Pragma'] = 'no-cache'
-  resp.headers['Expires'] = '0'
-  return resp
-
-@app.route('/create', methods=['POST'])
-def create_account():
-
-    user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
-    auth.send_email_verification(user['idToken'])
-    newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
-    #db.collection(u'user').add(newData)
-
-    return redirect('/static/login.html', code=302)
-
-
 
 if __name__ == '__main__':
   print("""
