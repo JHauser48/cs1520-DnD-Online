@@ -29,7 +29,7 @@ sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
 last_client = []            # use to store previous clients list, compare to track clients
-single_events = ['get_sheet', 'get_blank'] # track events where should only be sent to sender of event, i.e. not broadcast
+single_events = ['get_sheet', 'get_blank', 'load_sheets'] # track events where should only be sent to sender of event, i.e. not broadcast
 user_acc = ''
 user_token = ''
 
@@ -81,32 +81,6 @@ mod_stats = {
 }
 
 # map all abbreviated ids to full name for printing
-class_abbrev = {
-  'barb': 'Barbarian',
-  'bard': 'Bard',
-  'cleric': 'Cleric',
-  'druid': 'Druid',
-  'fight': 'Fighter',
-  'monk': 'Monk',
-  'pal': 'Paladin',
-  'ranger': 'Ranger',
-  'rogue': 'Rogue',
-  'sorc': 'Sorcerer',
-  'warl': 'Warlock',
-  'wiz': 'Wizard'
-}
-
-race_abbrev = {
-  'drag': 'Dragonborn',
-  'dwarf': 'Dwarf',
-  'elf': 'Elf',
-  'halfelf': 'Half-Elf',
-  'halfling': 'Halfling',
-  'halforc': 'Half-Orc',
-  'human': 'Human',
-  'tief': 'Tiefling'
-}
-
 align_abbrev = {
   'lg': 'Lawful Good',
   'ng': 'Neutral Good',
@@ -170,8 +144,13 @@ def remove_client(uname, room):
   global r_to_client
   global u_to_client
   to_rem = u_to_client.pop(uname) # remove leaving client's entry and get val
+  print(to_rem) # DEBUG
   if to_rem in r_to_client[room]:
+    print('removing client') # DEBUG
     r_to_client[room].remove(to_rem)
+  if not r_to_client[room]:
+    print(f'room {room} is empty!') # DEBUG
+    r_to_client.pop(room) # remove room
   if to_rem in last_client:
     last_client.remove(to_rem)  # client gone
 
@@ -193,11 +172,15 @@ def decide_request(req, uname, isPlayer, clients, room):
     resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
-    # also need to update sheet for leaving user, key = UID + title
-    title = req['msg']['sheet_title']
-    uid = uname
-    mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, 
-    req['msg'])
+    # also need to update sheet for leaving user, key = UID + title, IF NOT EMPTY
+    if req['msg']:
+      title = req['msg']['sheet_title']
+      uid = uname
+      if isPlayer:
+        mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
+      else:
+        mongo.db['dmsheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
+    print(f'{uname} is leaving')
     remove_client(uname, room)
     resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
   elif req_type == 'get_sheet':
@@ -206,18 +189,32 @@ def decide_request(req, uname, isPlayer, clients, room):
     # can be either grabbing from db or forming based on raw JSON
     if 'title' in req.keys():
       # title indicates retrieving from db, use UID as key
-      print('shouldnt be here lol')
+      uid = uname
+      title = req['title']
+      # find requested sheet in DB
+      if isPlayer:
+        found_raw = mongo.db['psheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
+        jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
+        resp = {'msg': data, 'raw': found_raw, 'type': 'sheet', 'l2x': level_to_xp}
+      else:
+        found_raw = mongo.db['dmsheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
+        jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
+        resp = {'msg': data, 'raw': found_raw, 'type': 'dmstuff'}
     else:
       # raw JSON of sheet sent in message, store in db using UID as key
       raw_sheet = req['msg']
-      raw_sheet['uid'] = session['u_token'] # add name as key for retrieving document
-      mongo.db['psheets'].insert_one(raw_sheet)
+      #raw_sheet['uid'] = session['u_token']
+      raw_sheet['uid'] = uname # TODO: CHANGE THIS TO THE SESSION
+      if isPlayer:
+        mongo.db['psheets'].insert_one(raw_sheet)
+      else:
+        mongo.db['dmsheets'].insert_one(raw_sheet)
       # db.collection(u'psheets').add(raw_sheet)
-    jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
-    if isPlayer:
-        resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
-    else:
-        resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
+      jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
+      if isPlayer:
+          resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
+      else:
+          resp = {'msg': data, 'raw': raw_sheet, 'type': 'dmstuff'}
   elif req_type == 'change_attr':
     # someone changed a numeric attribute
     direction = 'increased' if req['dir'] else 'decreased'
@@ -230,11 +227,11 @@ def decide_request(req, uname, isPlayer, clients, room):
   elif req_type == 'change_text':
     # someone has added to textual attribute
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
-    resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.', 
+    resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.',
     'color': 'chocolate', 'type': 'status'}
   elif req_type == 'add_gem':
     # someone has added new gems
-    resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) + 
+    resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) +
     ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
   elif req_type == 'add_item':
     # someone added either weapon, item, or spell
@@ -245,9 +242,31 @@ def decide_request(req, uname, isPlayer, clients, room):
     resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
     '.', 'color': 'chocolate', 'type': 'status'}
   elif req_type == 'get_blank':
-    # player asking for blank html form to fill out
-    blank_form = get_sheet_form()
-    resp = {'msg': blank_form, 'type': 'create_psheet'}
+    if isPlayer:
+      # player asking for blank html form to fill out
+      blank_form = get_sheet_form()
+      resp = {'msg': blank_form, 'type': 'create_psheet'}
+    else:
+      raw = {
+        'sheet_title' : '',
+        'notes' : '',
+        'monsters' : {},
+        'encounter' : {
+          'monsters': [],
+          'turnorder': []
+        }
+      }
+      blank_form = get_dm_sheet_form()
+      resp = {'msg': blank_form, 'raw': raw, 'type': 'create_dmsheet'}
+  elif req_type == 'load_sheets':
+    # player asking for list of their sheets, get from DB
+    #uid = session['u_token']
+    uid = uname # TODO: CHANGE THIS TO SESSION
+    if isPlayer:
+      all_sheets = dumps(mongo.db['psheets'].find({'uid': uid})) # store list of all sheets
+    else:
+      all_sheets = dumps(mongo.db['dmsheets'].find({'uid': uid}))
+    resp = {'msg': all_sheets, 'type': 'sheet_list'}
   return dumps(resp) # convert JSON to string
 
 
@@ -270,7 +289,9 @@ def chat_socket(ws):
     global u_to_client
     msg = loads(message) # convert to dict
     # now process message dependent on type + room, clients
-    clients = list(ws.handler.server.clients.values())
+    if ws.handler.server.clients:
+      print(ws.handler.server.clients.keys());      # DEBUG
+      clients = list(ws.handler.server.clients.values())
     room = session.get('room')
     resp = decide_request(msg, uname, isPlayer, clients, room)
     # check if broadcast or single event
@@ -291,7 +312,7 @@ def chat_socket(ws):
 
 @app.route('/')
 def root():
-    return redirect("/static/index.html", code=302)
+    return redirect("/static/login.html", code=302)
 
 @app.route('/play')
 def play():
@@ -308,6 +329,8 @@ def join_post():
   # store session info for use
   session['name'] = request.form['uname']
   session['room'] = request.form['rname']
+  print(request.environ.get('HTTP_X_REAL_IP', request.remote_addr))     # DEBUG
+  print(request.environ.get('REMOTE_PORT')) # DEBUG
   session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
   return redirect(url_for('.play'), code=302)
 
@@ -340,6 +363,22 @@ def login_account():
   except:
     return 'something went wrong'
 
+def get_dm_sheet_form():
+  doc, tag, text= Doc().tagtext()
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col title'):
+      text('~ Name Your DM Sheet ~')
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col col-md-10'):
+      doc.asis('<input type="text" id="dmtitle" placeholder="Title">')
+    with tag('div', klass = 'col col-md-2 no-border'):
+      with tag('div', klass = '.btn', id='tbtn'):
+        text('Enter Title')
+  with tag('div', klass = 'row', id='err'):
+    text('')
+  resp = doc.getvalue()
+  return resp
+
 # helper to build HTML for user creating new sheet
 def get_sheet_form():
   doc, tag, text= Doc().tagtext()
@@ -362,51 +401,11 @@ def get_sheet_form():
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='class'):
           text('Class: ')
-          with tag('select', klass='sel create_p', id="pclass"):
-            with tag('option', value='barb'):
-              text('Barbarian')
-            with tag('option', value='bard'):
-              text('Bard')
-            with tag('option', value='cleric'):
-              text('Cleric')
-            with tag('option', value='druid'):
-              text('Druid')
-            with tag('option', value='fight'):
-              text('Fighter')
-            with tag('option', value='monk'):
-              text('Monk')
-            with tag('option', value='pal'):
-              text('Paladin')
-            with tag('option', value='ranger'):
-              text('Ranger')
-            with tag('option', value='rogue'):
-              text('Rogue')
-            with tag('option', value='sorc'):
-              text('Sorcerer')
-            with tag('option', value='warl'):
-              text('Warlock')
-            with tag('option', value='wiz'):
-              text('Wizard')
+          doc.asis('<input class="in create_p" id="pclass" placeholder="Class">')
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='race'):
           text('Race: ')
-          with tag('select', klass='sel create_p', id="prace"):
-            with tag('option', value='drag'):
-              text('Dragonborn')
-            with tag('option', value='dwarf'):
-              text('Dwarf')
-            with tag('option', value='elf'):
-              text('Elf')
-            with tag('option', value='halfelf'):
-              text('Half-Elf')
-            with tag('option', value='halfling'):
-              text('Halfling')
-            with tag('option', value='halforc'):
-              text('Half-Orc')
-            with tag('option', value='human'):
-              text('Human')
-            with tag('option', value='tief'):
-              text('Tiefling')
+          doc.asis('<input class="in create_p" id="prace" placeholder="Race">')
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namefields', id='align'):
           text('Alignment: ')
@@ -618,10 +617,10 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('Name: ' + raw_resp['name'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='class'):
-            text('Class: ' + class_abbrev[(raw_resp['class'])])
+            text('Class: ' + raw_resp['class'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='race'):
-            text('Race: ' + race_abbrev[(raw_resp['race'])])
+            text('Race: ' + raw_resp['race'])
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col namefields', id='align'):
             text('Alignment: ' + align_abbrev[(raw_resp['align'])])
@@ -631,10 +630,10 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Level/XP ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='level'):
-            text('Level: ' + raw_resp['level'])
+            text('Level: ' + str(raw_resp['level']))
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='xp'):
-            text('Experience Points: ' + raw_resp['xp'])
+            text('Experience Points: ' + str(raw_resp['xp']))
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col levelfields', id='next_xp'):
             text('Next Level Exp: ' + level_to_xp[(int(raw_resp['level']) + 1)])
@@ -673,32 +672,32 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Ability Scores ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col str', id='str'):
-            text(raw_resp['ability-scores']['str'] + ' Strength')
+            text(str(raw_resp['ability-scores']['str']) + ' Strength')
           with tag('div', klass = 'col str', id='str_mod'):
             text(str(modifier(raw_resp['ability-scores']['str'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col dex', id='dex'):
-            text(raw_resp['ability-scores']['dex'] + ' Dexterity')
+            text(str(raw_resp['ability-scores']['dex']) + ' Dexterity')
           with tag('div', klass = 'col str', id='dex_mod'):
             text(str(modifier(raw_resp['ability-scores']['dex'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col const', id='const'):
-            text(raw_resp['ability-scores']['const'] + ' Constitution')
+            text(str(raw_resp['ability-scores']['const']) + ' Constitution')
           with tag('div', klass = 'col str', id='const_mod'):
             text(str(modifier(raw_resp['ability-scores']['const'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col intell', id='intell'):
-            text(raw_resp['ability-scores']['intell'] + ' Intelligence')
+            text(str(raw_resp['ability-scores']['intell']) + ' Intelligence')
           with tag('div', klass = 'col str', id='intell_mod'):
             text(str(modifier(raw_resp['ability-scores']['intell'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col wis', id='wis'):
-            text(raw_resp['ability-scores']['wis'] + ' Wisdom')
+            text(str(raw_resp['ability-scores']['wis']) + ' Wisdom')
           with tag('div', klass = 'col str', id='wis_mod'):
             text(str(modifier(raw_resp['ability-scores']['wis'])) + ' Modifier')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col char', id='char'):
-            text(raw_resp['ability-scores']['char'] + ' Charisma')
+            text(str(raw_resp['ability-scores']['char']) + ' Charisma')
           with tag('div', klass = 'col str', id='char_mod'):
             text(str(modifier(raw_resp['ability-scores']['char'])) + ' Modifier')
       with tag('div', klass = 'col statbox'):
@@ -711,7 +710,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text(str(modifier(raw_resp['ability-scores']['dex']) + 10) + " Armor Class")
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col hp', id='hp'):
-            text(raw_resp['hp'] + " Hit Points")
+            text(str(raw_resp['hp']) + " Hit Points")
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col wepbox', id='weps'):
         with tag('div', klass = 'row'):
@@ -797,7 +796,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('Weight')
           with tag('div', klass = 'col itemfields'):
             text('Notes')
-        if 'items' in raw_resp.keys():  
+        if 'items' in raw_resp.keys():
           for item in raw_resp['items']:
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col itemfields'):
@@ -831,19 +830,19 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
           with tag('div', klass = 'col'):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='pp'):
-                text('PP: ' + raw_resp['treasures']['pp'])
+                text('PP: ' + str(raw_resp['treasures']['pp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='gp'):
-                text('GP: ' + raw_resp['treasures']['gp'])
+                text('GP: ' + str(raw_resp['treasures']['gp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='ep'):
-                text('EP: ' + raw_resp['treasures']['ep'])
+                text('EP: ' + str(raw_resp['treasures']['ep']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='sp'):
-                text('SP: ' + raw_resp['treasures']['sp'])
+                text('SP: ' + str(raw_resp['treasures']['sp']))
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col treasfields', id='cp'):
-                text('CP: ' + raw_resp['treasures']['cp'])
+                text('CP: ' + str(raw_resp['treasures']['cp']))
           with tag('div', klass ='col', id='gems'):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col title'):
@@ -852,7 +851,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
               for gem in raw_resp['treasures']['gems']:
                 with tag('div', klass ='row'):
                   with tag('div', klass = 'col treasfields', id=gem['name']):
-                    text(gem['name'] + ": " + gem['num'])
+                    text(gem['name'] + ": " + str(gem['num']))
             with tag('div', klass = 'row', id="gem_but"):
               # use element above to insert new gems
               with tag('div', klass = 'col treasfields title'):
@@ -864,232 +863,17 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             text('~ Condition/Speed ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col condfields', id='base_speed'):
-            text("Base Speed: " + raw_resp['base_speed'])
+            text("Base Speed: " + str(raw_resp['base_speed']))
           with tag('div', klass = 'col condfields', id='curr_speed'):
-            text("Current Speed: " + raw_resp['curr_speed'])
+            text("Current Speed: " + str(raw_resp['curr_speed']))
           with tag('div', klass = 'col condfields', id='cond'):
             with tag('span', id='cond_text'):
               text("Current Condition: " + raw_resp['condition'])
-              doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
+            doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
 
   else:
     #fake response and probably wont have the same parameters as a real one
-    raw_resp = {
-      'notes' : 'here are my notes we can just save this as plaintext maybe i will find a \nway to make a rich text editor so we can format \nthings better that would be cool.',
-      'monsters' : {
-        'Aarakocra' : {
-          'size':'Medium',#size of monster
-          'type':'Humanoid (aarakocra)',#idk if this is what its called
-          'alignment': 'Neutral Good',#for role playing
-          'ac': '12',#armor class
-          'hp': '13',#hit Points
-          'hit_dice': { #used to generate how many hit points a monster has
-            'number': '3', #number of dice
-            'value' : '8', #dice value (20 => d20 etc)
-          },
-          'speed': '20ft', #walking speed of the monster will worry about the other kinds of speed a monster can have later
-          'ability_scores' : { #abillity scores of the monster
-            'str' : '10',
-            'dex' : '14',
-            'const' : '10',
-            'intell': '11',
-            'wis' : '12',
-            'char' : '11'
-          },
-          'saving_throws' : { #bonuses to saving throws form : "+10", "+0", "-3", etc
-            'str' : '',
-            'dex' : '',
-            'const' : '',
-            'intell': '',
-            'wis' : '',
-            'char' : ''
-          },
-          'c_rating' : '1/4', #challenge rating of the monster (have to think about the proficency bonuses involved with challenge rating)
-          'skills' : [{
-            'skill_name': 'Perception',
-            'ability' : 'wis',
-            'mod': '+5'
-          }], #list of skills the monster has form: {'skill-name': '', 'ability': '', 'mod': ''}
-          'resistances' : [], #list of damage types the monster has a resistance to
-          'vulnerabilities' : [], #list of damage types the monster has a vulnerability to
-          'immunities' : [], #list of damage types the monster has an immunity to
-          'senses' : [{
-            'sense' : 'passive perception',
-            'value' : '17'
-          }], #list of senses and the radius of that sense that the monster has form {'sense': '', 'radius': ''}
-          'languages' : [], #languages the monster can speak form: {'language': '', 'speak': '', 'understand': ''}
-          'telepathy' : {'radius' : ''}, #if radius is non zero then the monster has telepathy probably will integrate into the language portion of the monster shee
-          'special_traits' : [{
-            'trait' : 'Dive Attack',
-            'notes' : 'If the aarakocra is flying and dives at least 30 feet straight toward the target and then hits is with a melee weapon attack, the attack deal an extra 1d6 damage to the target'
-          }], # special traits that are relevant to combat form: {'trait': '', 'notes' : ''}
-          'actions' : [{
-            'action_type': 'weapon attack',
-            'name' : 'Talon',
-            'type' : 'melee',
-            'reach' : '5ft',
-            'min_range': '',
-            'max_range': '',
-            'hit_mod': '+4',
-            'damage' : {
-              'type' : 'slashing',
-              'number' : '1',
-              'value' : '4',
-              'mod' : 'dex'
-            },
-            'notes' : ''
-          },{
-            'action-type': 'weapon attack',
-            'name' : 'Javelin',
-            'type' : 'melee/ranged',
-            'reach' : '5ft',
-            'min_range': '30ft',
-            'max_range': '120ft',
-            'hit-mod': '+4',
-            'damage' : {
-              'type' : 'piercing',
-              'number' : '1',
-              'value' : '6',
-              'mod' : 'dex'
-            },
-            'notes' : ''
-          }], #a list of actions that the monster can perform the form of each action varies on the type of action
-          'reactions' : [], # a list of reactions a monster can have
-          'legendary_actions' : {
-            'num_action' : '',
-            'actions' : []
-          }
-        },
-        'Goristro' : {
-          'size':'Huge',#size of monster
-          'type':'Fiend (Demon)',#idk if this is what its called
-          'alignment': 'Chaotic Evil',#for role playing
-          'ac': '19',#armor class
-          'hp': '310',#hit Points
-          'hit_dice': { #used to generate how many hit points a monster has
-            'number': '23', #number of dice
-            'value' : '12' #dice value (20 => d20 etc)
-          },
-          'speed': '40ft', #walking speed of the monster will worry about the other kinds of speed a monster can have later
-          'ability_scores' : { #abillity scores of the monster
-            'str' : '25',
-            'dex' : '11',
-            'const' : '25',
-            'intell': '6',
-            'wis' : '13',
-            'char' : '14'
-          },
-          'saving_throws' : { #bonuses to saving throws form : "+10", "+0", "-3", etc
-            'str' : '+13',
-            'dex' : '+6',
-            'const' : '+13',
-            'intell': '',
-            'wis' : '+7',
-            'char' : ''
-          },
-          'c-rating' : '17', #challenge rating of the monster (have to think about the proficency bonuses involved with challenge rating)
-          'skills' : [{
-            'skill_name': 'Perception',
-            'ability' : 'wis',
-            'mod': '+7'
-          }], #list of skills the monster has form: {'skill-name': '', 'ability': '', 'mod': ''}
-          'resistances' : ['cold', 'fire', 'lightning', 'bludgeoning', 'piercing', 'slashing'], #list of damage types the monster has a resistance to
-          'vulnerabilities' : [], #list of damage types the monster has a vulnerability to
-          'immunities' : ['poison'], #list of damage types the monster has an immunity to
-          'senses' : [{
-            'sense' : 'darkvision',
-            'value' : '120ft'
-          },{
-            'sense' : 'passive perception',
-            'value': '17'
-          }], #list of senses and the value of that sense that the monster has form {'sense': '', 'value': ''}
-          'languages' : [{
-            'language':'Abyssal',
-            'speak' : 'true',
-            'understand' : 'true'
-          }], #languages the monster can speak form: {'language': '', 'speak': '', 'understand': ''}
-          'telepathy' : {'radius' : ''}, #if radius is non zero then the monster has telepathy probably will integrate into the language portion of the monster shee
-          'special_traits' : [{
-            'trait' : 'Charge',
-            'notes' : 'If the goristro moves at least 15 feet straight toward a target and then hits it with a gore attack on the same turn, the target takes an extra 7d10 piercing damage. If the target is a creature, it must succeed on a DC 21 Strength saving throw or be pushed up to 20 feet away and knocked prone.'
-          },{
-            'trait' : 'Labyrinthine Recall',
-            'notes' : 'The goristro can perfectly recall any path it has traveled.'
-          },{
-            'trait' : 'Magic Resistence',
-            'notes' : 'The goristro has advantage on saving throws against spells and other magical effects.'
-          },{
-            'trait' : 'Siege Monster',
-            'notes' : 'The goristro deals double damage to objects and structures.'
-          }], # special traits that are relevant to combat form: {'trait': '', 'notes' : ''}
-          'actions' : [{
-            'action_type' : 'other',
-            'name' : 'Multiattack',
-            'notes' : 'The goristro makes three attacks: two with its fists and one with its hoof.'
-          },{
-            'action_type': 'weapon attack',
-            'name' : 'Fist',
-            'type' : 'melee',
-            'reach' : '10ft',
-            'min_range': '',
-            'max_range': '',
-            'hit_mod': '+13',
-            'damage' : {
-              'type' : 'bludgeoning',
-              'number' : '3',
-              'value' : '8',
-              'mod' : 'str'
-            },
-            'notes' : ''
-          },{
-            'action_type': 'weapon attack',
-            'name' : 'Hoof',
-            'type' : 'melee',
-            'reach' : '5ft',
-            'min_range': '',
-            'max_range': '',
-            'hit_mod': '+13',
-            'damage' : {
-              'type' : 'bludgeoning',
-              'number' : '3',
-              'value' : '10',
-              'mod' : 'str'
-            },
-            'notes' : 'If the target is a creature, it must succeed on a DC 21 Strength saving throw or be knocked prone.'
-          },{
-            'action_type': 'weapon attack',
-            'name' : 'Gore',
-            'type' : 'melee',
-            'reach' : '10ft',
-            'min_range': '',
-            'max_range': '',
-            'hit_mod': '+13',
-            'damage' : {
-              'type' : 'piercing',
-              'number' : '7',
-              'value' : '10',
-              'mod' : 'str'
-            },
-            'notes' : ''
-          }], #a list of actions that the monster can perform the form of each action varies on the type of action
-          'reactions' : [], # a list of reactions a monster can have
-          'legendary_actions' : {
-            'num_action' : '',
-            'actions' : []
-          }
-        }
-      },
-      'encounter' : {
-        'monsters':[{
-          'name' : 'Big man',
-          'type' : 'Goristro'
-        },{
-          'name' : 'bird man',
-          'type' : 'Aarakocra'
-        }],
-        'turnorder':[]
-      }
-    }
+
     # use dict to build HTML using library
     doc, tag, text = Doc().tagtext()
     with tag('div', klass = 'row'):
@@ -1104,14 +888,18 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
         text('Notes')
     with tag('div', klass = 'row dmcontent'):
       with tag('div', klass = 'col dmnotes', id='shown'):
-        with tag('textarea', placeholder='Notes for campaign go here...', id='dmtextarea'):
-          text(raw_resp['notes'])
+        with tag('div', klass='row row-no-gutters'):
+          with tag('div', klass = 'col col-md-12'):
+            with tag('textarea', placeholder='Notes for campaign go here...', id='dmtextarea'):
+              text(raw_resp['notes'])
       with tag('div', klass = 'col dmmonster', id='hidden'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col-md-4'):
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col', id='newmonsterbtn'):
                 text('New Monster')
+              with tag('div', klass = 'col', id='addmonsterbtn'):
+                text('Add Monster')
             with tag('div', klass = 'row'):
               with tag('div', klass = 'col dmmonsterlist'):
                 with tag('div', klass='row'):
@@ -1132,8 +920,10 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
               with tag('div', klass = 'col col-md-5', id = 'size'):
                 text('Size: ')
             with tag('div', klass = 'row row-no-gutters'):
-              with tag('div', klass = 'col col-md-12', id = 'type'):
+              with tag('div', klass = 'col col-md-8', id = 'type'):
                 text('Type: ')
+              with tag('div', klass = 'col col-md-4', id = 'rating'):
+                text('Rating: ')
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col col-md-4' , id='ac'):
                 text('AC: ')
@@ -1142,39 +932,165 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
               with tag('div', klass = 'col col-md-4', id='hit_dice'):
                 text('Hit Dice: ')
             with tag('div', klass = 'row row-no-gutters'):
-              with tag('div', klass = 'col no-border col-md-6', id = 'ability-scores'):
-                text('Ability Scores')
+              with tag('div', klass = 'col col-md-8', id = 'alignment'):
+                text('Alignment: ')
+              with tag('div', klass = 'col col-md-4', id = 'speed'):
+                text('Speed: ')
+            with tag('div', klass = 'row row-no-gutters'):
+              with tag('div', klass = 'col'):
                 with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id = 'ability-scores-str'):
-                    text('Str: ')
-                  with tag('div', klass = 'col', id = 'ability-scores-str-mod'):
-                    text('Mod: ')
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id = 'ability-scores-dex'):
-                    text('Dex: ')
-                  with tag('div', klass = 'col', id = 'ability-scores-dex-mod'):
-                    text('Mod: ')
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id = 'ability-scores-const'):
-                    text('Con: ')
-                  with tag('div', klass = 'col', id = 'ability-scores-const-mod'):
-                    text('Mod: ')
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id = 'ability-scores-intell'):
-                    text('Int: ')
-                  with tag('div', klass = 'col', id = 'ability-scores-intell-mod'):
-                    text('Mod: ')
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id = 'ability-scores-wis'):
-                    text('Wis: ')
-                  with tag('div', klass = 'col', id = 'ability-scores-wis-mod'):
-                    text('Mod: ')
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col', id = 'ability-scores-char'):
-                    text('Cha: ')
-                  with tag('div', klass = 'col', id = 'ability-scores-char-mod'):
-                    text('Mod: ')
+                  with tag('div', klass = 'col col-md-4', id = 'asbtn'):
+                    text('Ability Scores~')
+                  with tag('div', klass = 'col col-md-5', id = 'tsbtn'):
+                    text('Throws/Skills')
+                  with tag('div', klass = 'col col-md-3', id='assBtn'):
+                    text('show')
+                with tag('div', klass = 'row row-no-gutters assSec', style='display: none'):
+                  with tag('div', klass = 'col aswin', id = 'shown'):
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col col-md-8', id = 'ability-scores-str'):
+                        text('Str: ')
+                      with tag('div', klass = 'col col-md-4', id = 'ability-scores-str-mod'):
+                        text('Mod: ')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col col-md-8', id = 'ability-scores-dex'):
+                        text('Dex: ')
+                      with tag('div', klass = 'col col-md-4', id = 'ability-scores-dex-mod'):
+                        text('Mod: ')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col col-md-8', id = 'ability-scores-const'):
+                        text('Con: ')
+                      with tag('div', klass = 'col col-md-4', id = 'ability-scores-const-mod'):
+                        text('Mod: ')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col col-md-8', id = 'ability-scores-intell'):
+                        text('Int: ')
+                      with tag('div', klass = 'col col-md-4', id = 'ability-scores-intell-mod'):
+                        text('Mod: ')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col col-md-8', id = 'ability-scores-wis'):
+                        text('Wis: ')
+                      with tag('div', klass = 'col col-md-4', id = 'ability-scores-wis-mod'):
+                        text('Mod: ')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col col-md-8', id = 'ability-scores-char'):
+                        text('Cha: ')
+                      with tag('div', klass = 'col col-md-4', id = 'ability-scores-char-mod'):
+                        text('Mod: ')
+                  with tag('div', klass = 'col tswin', id = 'hidden'):
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col col-md-4', id='throws'):
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id = 'throws-str'):
+                            text('Str: ')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id = 'throws-dex'):
+                            text('Dex: ')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id = 'throws-const'):
+                            text('Con: ')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id = 'throws-intell'):
+                            text('Int: ')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id = 'throws-wis'):
+                            text('Wis: ')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id = 'throws-char'):
+                            text('Cha: ')
+                      with tag('div', klass = 'col col-md-8', id='skills'):
+                        text('Skills:')
 
+
+        #senses languages and traits section
+            with tag('div', klass = 'row row-no-gutters'):
+              with tag('div', klass = 'col'):
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col col-md-3', id = 'sensebtn'):
+                    text('Senses~')
+                  with tag('div', klass = 'col col-md-3', id = 'langbtn'):
+                    text('Lang')
+                  with tag('div', klass = 'col col-md-3', id = 'traitbtn'):
+                    text('Traits')
+                  with tag('div', klass = 'col col-md-3', id='sltBtn'):
+                    text('show')
+                with tag('div', klass = 'row row-no-gutters sltSec', style='display: none'):
+                  with tag('div', klass = 'col senseswin', id = 'shown'):
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col', id='addSense'):
+                        text('Add Sense')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id = 'senseList'):
+                        text('Sense List:')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col col-md-6', id='senseName'):
+                            text('Name: ')
+                          with tag('div', klass = 'col col-md-6', id='senseValue'):
+                            text('Value: ')
+                  with tag('div', klass = 'col langwin', id = 'hidden'):
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col', id='addLang'):
+                        text('Add Language')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id = 'langList'):
+                        text('Language List:')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col col-md-6', id='langName'):
+                            text('Language: ')
+                          with tag('div', klass = 'col col-md-3', id='langSpeak'):
+                            text('Speak: ')
+                          with tag('div', klass = 'col col-md-3', id='langUnstd'):
+                            text('Undstnd: ')
+                  with tag('div', klass = 'col traitwin', id = 'hidden'):
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col', id='addTrait'):
+                        text('Add Trait')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id = 'traitList'):
+                        text('Trait List:')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col col-md-5', id='traitName'):
+                            text('Trait: ')
+                          with tag('div', klass = 'col col-md-7', id='traitNote'):
+                            text('Description: ')
+        #actions reactions and legendary actions
+            with tag('div', klass = 'row row-no-gutters'):
+              with tag('div', klass = 'col'):
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col col-md-3', id = 'actionbtn'):
+                    text('Actions~')
+                  with tag('div', klass = 'col col-md-3', id = 'reactionbtn'):
+                    text('Reactions')
+                  with tag('div', klass = 'col col-md-3', id = 'legendbtn'):
+                    text('Legend')
+                  with tag('div', klass = 'col col-md-3', id='arlBtn'):
+                    text('show')
+                with tag('div', klass = 'row row-no-gutters arlSec', style='display: none'):
+                  with tag('div', klass = 'col actionswin', id = 'shown'):
+                    text('Actions')
+                  with tag('div', klass = 'col reactionwin', id = 'hidden'):
+                    text('Reactions')
+                  with tag('div', klass = 'col legendwin', id = 'hidden'):
+                    text('Legendary Actions')
+        #resistances immunities and vulnerabilities
+            with tag('div', klass = 'row row-no-gutters'):
+              with tag('div', klass = 'col'):
+                with tag('div', klass = 'row'):
+                  with tag('div', klass = 'col col-md-3', id = 'resistbtn'):
+                    text('Resist~')
+                  with tag('div', klass = 'col col-md-3', id = 'immunebtn'):
+                    text('Immune')
+                  with tag('div', klass = 'col col-md-3', id = 'vulnerbtn'):
+                    text('Vulner')
+                  with tag('div', klass = 'col col-md-3', id='rivBtn'):
+                    text('show')
+                with tag('div', klass = 'row row-no-gutters rivSec', style='display: none'):
+                  with tag('div', klass = 'col resistwin', id = 'shown'):
+                    text('Resistances')
+                  with tag('div', klass = 'col immunewin', id = 'hidden'):
+                    text('Immunities')
+                  with tag('div', klass = 'col vulnerwin', id = 'hidden'):
+                    text('Vulnerabilities')
       #end dm edit
       with tag('div', klass = 'col dmencounter', id='hidden'):
         with tag('div', klass = 'col col-xs-4 col-sm-4 col-md-4 dmmonsterlist'):

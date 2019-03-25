@@ -16,53 +16,63 @@ $(document).ready(function(){
     var socket_uri = scheme + window.location.hostname + ':' + location.port + '/play';
     socket = new WebSocket(socket_uri);         //create socket for URI
     var sheet = isPlayer ? $('#sheet') : $('#dmstuff'); //save sheet element for adding in sheet/DM info
-    var raw_sheet; //JSON version of sheet, use for updates during session, send back to server at end for updating in DB
+    var raw_sheet = {}; //JSON version of sheet, use for updates during session, send back to server at end for updating in DB
     var l2x;      //used for players that need xp for next level, map level to needed XP
-    var cond_list = ['Normal', 'Blinded', 'Charmed', 'Deafened', 'Fatigued', 'Frightened', 'Grappled', 
+    var cond_list = ['Normal', 'Blinded', 'Charmed', 'Deafened', 'Fatigued', 'Frightened', 'Grappled',
     'Incapacitated', 'Invisible', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained',
     'Stunned', 'Unconscious'];  //list of all possible conditions, use for list
 
     //DM variables
     var newMonsterEdit = { //new monster info that gets input into the html
-      'size':'<input type=\'text\' name=\'size\' id=\'newMonsterTextField\' placeholder=\'Size\'>',
-      'type':'<input type=\'text\' name=\'type\' id=\'newMonsterTextField\' placeholder=\'Monster Type\'>',
-      'alignment': '<input type=\'text\' name=\'alignment\' id=\'newMonsterTextField\' placeholder=\'Alignment\'>',
-      'ac': '<input type=\'text\' name=\'ac\' id=\'newMonsterTextField\' placeholder=\'AC\'>',
-      'hp': '<input type=\'text\' name=\'hp\' id=\'newMonsterTextField\' placeholder=\'Avg. HP\'>',
+      'size':'<input type=\'text\' name=\'size\' class=\'newMonsterTextField\' placeholder=\'Size\' value=\'\'>',
+      'type':'<input type=\'text\' name=\'type\' class=\'newMonsterTextField\' placeholder=\'Monster Type\' value=\'\'>',
+      'alignment': '<input type=\'text\' name=\'alignment\' class=\'newMonsterTextField\' placeholder=\'Alignment\' value=\'\'>',
+      'ac': '<input type=\'text\' name=\'ac\' class=\'newMonsterTextField\' placeholder=\'AC\' value=\'\'>',
+      'hp': '<input type=\'text\' name=\'hp\' class=\'newMonsterTextField\' placeholder=\'Avg. HP\' value=\'\'>',
       'hit_dice': {
-      'number': '<input type=\'text\' name=\'number\' id=\'newMonsterHD\'>',
-      'value' : '<input type=\'text\' name=\'value\' id=\'newMonsterHD\'>',
+      'number': '<input type=\'text\' name=\'hdnumber\' class=\'newMonsterHD\' value=\'\'>',
+      'value' : '<input type=\'text\' name=\'hdvalue\' class=\'newMonsterHD\' value=\'\'>',
       },
-      'speed': '<input type=\'text\' name=\'speed\' id=\'newMonsterTextField\' placeholder=\'Speed\'>',
+      'speed': '<input type=\'text\' name=\'speed\' class=\'newMonsterTextField\' placeholder=\'Speed\' value=\'\'>',
       'ability_scores' : {
-        'str' : '<input type=\'text\' name=\'str\' id=\'newMonsterTextField\' placeholder=\'Strength Stat\'>',
-        'dex' : '<input type=\'text\' name=\'dex\' id=\'newMonsterTextField\' placeholder=\'Dexterity Stat\'>',
-        'const' : '<input type=\'text\' name=\'const\' id=\'newMonsterTextField\' placeholder=\'Constitution Stat\'>',
-        'intell': '<input type=\'text\' name=\'intell\' id=\'newMonsterTextField\' placeholder=\'Intelligence Stat\'>',
-        'wis' : '<input type=\'text\' name=\'wis\' id=\'newMonsterTextField\' placeholder=\'Wisdom Stat\'>',
-        'char' : '<input type=\'text\' name=\'char\' id=\'newMonsterTextField\' placeholder=\'Charisma Stat\'>'
+        'str' : '<input type=\'text\' name=\'str\' class=\'newMonsterTextField\' placeholder=\'Strength Stat\' value=\'\'>',
+        'dex' : '<input type=\'text\' name=\'dex\' class=\'newMonsterTextField\' placeholder=\'Dexterity Stat\' value=\'\'>',
+        'const' : '<input type=\'text\' name=\'const\' class=\'newMonsterTextField\' placeholder=\'Constitution Stat\' value=\'\'>',
+        'intell': '<input type=\'text\' name=\'intell\' class=\'newMonsterTextField\' placeholder=\'Intelligence Stat\' value=\'\'>',
+        'wis' : '<input type=\'text\' name=\'wis\' class=\'newMonsterTextField\' placeholder=\'Wisdom Stat\' value=\'\'>',
+        'char' : '<input type=\'text\' name=\'char\' class=\'newMonsterTextField\' placeholder=\'Charisma Stat\' value=\'\'>'
       },
       'saving_throws' : {
-        'str' : '',
-        'dex' : '',
-        'const' : '',
-        'intell': '',
-        'wis' : '',
-        'char' : ''
+        'str' : '<input type=\'text\' name=\'throw-str\' class=\'newMonsterTextField\' value=\'\'>',
+        'dex' : '<input type=\'text\' name=\'throw-dex\' class=\'newMonsterTextField\' value=\'\'>',
+        'const' : '<input type=\'text\' name=\'throw-const\' class=\'newMonsterTextField\' value=\'\'>',
+        'intell': '<input type=\'text\' name=\'throw-intell\' class=\'newMonsterTextField\' value=\'\'>',
+        'wis' : '<input type=\'text\' name=\'throw-wis\' class=\'newMonsterTextField\' value=\'\'>',
+        'char' : '<input type=\'text\' name=\'throw-char\' class=\'newMonsterTextField\' value=\'\'>'
       },
-      'c_rating' : '0',
+      'c_rating' : '<input type=\'text\' name=\'c_rating\' class=\'newMonsterTextField\' value=\'\'>',
       'skills' : [], //{'skill-name': '', 'ability': '', 'mod': ''}
       'resistances' : [],
       'vulnerabilities' : [],
       'immunities' : [],
-      'senses' : [],//{'sense': '', 'radius': ''} <--need to modify this cause of passive perception
-      'languages' : [],//{'language': '', 'speak': '', 'understand': ''}
-      'telepathy' : {'radius' : ''},
-      'special_traits' : [],//{'trait': '', 'notes' : ''}
+      'senses' : [{
+        'sense': '<input type=\'text\' name=\'sense\' class=\'newMonsterTextField\' placeholder=\'Sense\' value=\'\'>',
+        'value': '<input type=\'text\' name=\'value\' class=\'newMonsterTextField\' placeholder=\'Value\' value=\'\'>'
+      }],//{'sense': '', 'value': ''} <--need to modify this cause of passive perception
+      'languages' : [{
+        'language':'<input type=\'text\' name=\'language\' class=\'newMonsterTextField\' placeholder=\'Language\' value=\'\'>',
+        'speak': '<input type=\'text\' name=\'speak\' class=\'newMonsterTextField\' placeholder=\'Yes/No\' value=\'\'>',
+        'understand': '<input type=\'text\' name=\'understand\' class=\'newMonsterTextField\' placeholder=\'Yes/No\' value=\'\'>'
+      }],//{'language': '', 'speak': '', 'understand': ''}
+      //'telepathy' : {'radius' : ''},
+      'special_traits' : [{
+        'trait': '<input type=\'text\' name=\'trait\' class=\'newMonsterTextField\' placeholder=\'Trait\' value=\'\'>',
+        'notes': '<textarea name=\'notes\' class=\'newMonsterTextArea\' placeholder=\'Description of trait...\'></textarea>'
+      }],//{'trait': '', 'notes' : ''}
       'actions' : [],
       'reactions' : [],
       'legendary_actions' : {
-        'num_action' : '',
+        'num_action' : '<input type=\'text\' name=\'num_action\' class=\'newMonsterTextField\' placeholder=\'Actions\' value=\'\'>',
         'actions' : []
       }
     };
@@ -105,11 +115,11 @@ $(document).ready(function(){
           let gem_html = "";
           if (raw_sheet.treasures.hasOwnProperty('gems')) {
           raw_sheet.treasures.gems.forEach((gem) => {
-            let gem_name = gem.name
-            gem_html += `<option value="${gem_name}">${gem_name}</option>`
-          });
-          $('#change_attrs').append(gem_html);
-        }
+              let gem_name = gem.name
+              gem_html += `<option value="${gem_name}">${gem_name}</option>`
+            });
+            $('#change_attrs').append(gem_html);
+          }
 
           // --- BEGIN HANDLERS FOR PSHEET ELEMENTS ---
           //handle if user clicks spells, need to switch to spell view
@@ -181,7 +191,7 @@ $(document).ready(function(){
             }
             //add select fields for condition also submit button
             //build string of condition options
-            var cond_string = "";  
+            var cond_string = "";
             cond_list.forEach((cond) => {
               cond_string += `<option value="${cond}">${cond}</option>`
             });
@@ -201,10 +211,10 @@ $(document).ready(function(){
               raw_sheet['condition'] = sel_field;
               console.log(raw_sheet);     //DEBUG
               let msg = JSON.stringify({type: 'change_cond', change: sel_field, last: last_cond});
-              socket.send(msg);    
+              socket.send(msg);
             });
           });
-           
+
           break;
         case 'create_psheet':
           //server has sent psheet form for sheet creation
@@ -263,7 +273,7 @@ $(document).ready(function(){
           //now when user submits sheet, must validate input, form JSON, send to server
           $('#sub_sheet').click(function() {
             var req_fields = {};      //dict of all required fields use for checking
-            let req_list = ['ptitle', 'pname', 'pstr', 'pdex', 'pconst', 'pintell', 'pwis',
+            let req_list = ['ptitle', 'pname', 'pclass', 'prace', 'pstr', 'pdex', 'pconst', 'pintell', 'pwis',
             'pchar', 'php', 'ppp', 'pgp', 'pep', 'psp', 'pcp', 'pbase', 'pcurr'];
             req_list.forEach((req) => {
               req_fields[req] = $('#' + req).val();
@@ -279,9 +289,11 @@ $(document).ready(function(){
               }
             });
             if (empty)      return;     //empty
-            //now ensure fields that must be non-negative numbers are (i.e. all except name, speeds, title)
+            //now ensure fields that must be non-negative numbers are (i.e. all except name,
+            //class, racespeeds, title)
             Object.keys(req_fields).forEach((key) => {
-              if (key != 'pname' && key != 'pbase' && key != 'pcurr' && key != 'ptitle') {
+              if (key != 'pname' && key != 'pbase' && key != 'pcurr' && key != 'ptitle' &&
+                  key != 'pclass' && key != 'prace') {
                 if (!(/^\+?\d+$/.test(req_fields[key]))) {
                   empty = true;
                   $('#' + key)[0].setCustomValidity("Field must a non-negative Integer");
@@ -294,13 +306,13 @@ $(document).ready(function(){
             //now loop thru and clear fields
             Object.keys(req_fields).forEach((key) => {
               $('#' + key)[0].setCustomValidity("");
-              $('#' + key).val(''); 
+              $('#' + key).val('');
             });
             //now that input validation is done, we can start storing attrs in JSON
             sheet_obj['sheet_title'] = req_fields['ptitle'];
             sheet_obj['name'] = req_fields['pname'];
-            sheet_obj['class'] = $('#pclass').val();
-            sheet_obj['race'] = $('#prace').val();
+            sheet_obj['class'] = req_fields['pclass'];
+            sheet_obj['race'] = req_fields['prace'];
             sheet_obj['align'] = $('#palign').val();
             sheet_obj['ability-scores'] = {};
             sheet_obj['ability-scores']['str'] = req_fields['pstr'];
@@ -328,14 +340,64 @@ $(document).ready(function(){
             socket.send(msg);
           });
           break;
+        case 'sheet_list':
+          //server has sent us list of our saved sheets, must display
+          $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load
+          sheet.css('display', 'inline-block');    //unhide sheet
+          //form html row for each psheet, displaying title, character name, and choose button
+          var all_sheets = '';
+          let curr_msg = JSON.parse(data.msg);
+          console.log(curr_msg);     //DEBUG
+          console.log(typeof(curr_msg));
+          curr_msg.forEach((save_sheet) => {
+            console.log(save_sheet);
+            all_sheets += `<div class="row"><div class="col title">`+
+            `Sheet: <span class="highlight">${save_sheet.sheet_title}</span>` +
+            ((isPlayer == true) ? `Character Name: <span class="highlight">${save_sheet.name}</span>` : ``) +
+            `<button class="btn choose_sheet" id="${save_sheet.sheet_title}">Choose</button>`+
+            `</div></div>`;
+          });
+          sheet.html(all_sheets);       //display saved sheets for picking
+          //register handler for user choosing a sheet
+          $('.btn.choose_sheet').click(function() {
+            let chosen_sheet = this.id;       //sheet title == id of button
+            //send message to server asking for sheet
+            let msg = JSON.stringify({type: 'get_sheet', title: chosen_sheet});
+            socket.send(msg);
+          });
+          break;
+        case 'create_dmsheet':
+          $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load
+          sheet.css('display', 'inline-block');    //unhide sheet]
+          sheet.html(data.msg);
+          var raw = data.raw;
+          $('#tbtn').click(function(){
+            var title = $('#dmtitle').val();
+            if(title == ''){
+              var em = $('<div class="col"></div>');
+              em.html('Please enter a title for your dm sheet.');
+              $('#err').html(em);
+              return;
+            }
+            raw['sheet_title'] = title;
+            let msg = JSON.stringify({type: 'get_sheet', msg: raw});
+            socket.send(msg);
+          });
+          $('#dmtitle').change(function(){
+            $('#err').html('');
+          });
+          break;
         case 'dmstuff':
           //server has sent the dm sheet
+          $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load
+          sheet.css('display', 'inline-block');    //unhide sheet]
           sheet.html(data.msg);   //add sheet to HTML
           raw_sheet = data.raw; //store JSON
+          $('#dmtextarea').change(function(){
+            raw_sheet['notes'] = $('#dmtextarea').val();
+          });
           //get all the content divs for easy access later
-          arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];//dm sheet div buttons
-
-
+          arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];//dm sheet div button
           //need to be defined here so we know the dm sheet has been loaded
           $('#notes').click(function(){
             arrDmContentDiv.forEach(function(div){
@@ -355,56 +417,549 @@ $(document).ready(function(){
               if(div.attr('class') === 'col dmencounter') div.attr('id', 'shown');
             });
           });
-          var loadMonsterEdit = function(){
+
+          $('#assBtn').click(function(){
+            //console.log('clicked');
+            if($('.assSec').css('display') != 'none'){
+              $('.assSec').css('display', 'none');
+              $('#assBtn').html('show');
+            }else{
+              $('.assSec').css('display', 'inherit');
+              $('#assBtn').html('hide');
+            }
+          });
+
+          $('#asbtn').click(function(){
+            $('#asbtn').html('Ability Scores~');
+            $('#tsbtn').html('Throws/Skills');
+            $('.aswin').attr('id', 'shown');
+            $('.tswin').attr('id', 'hidden');
+          });
+
+          $('#tsbtn').click(function(){
+            $('#asbtn').html('Ability Scores');
+            $('#tsbtn').html('Throws/Skills~');
+            $('.aswin').attr('id', 'hidden');
+            $('.tswin').attr('id', 'shown');
+          });
+
+          $('#sltBtn').click(function(){
+            //console.log('clicked');
+            if($('.sltSec').css('display') != 'none'){
+              $('.sltSec').css('display', 'none');
+              $('#sltBtn').html('show');
+            }else{
+              $('.sltSec').css('display', 'inherit');
+              $('#sltBtn').html('hide');
+            }
+          });
+
+          $('#sensebtn').click(function(){
+            $('#sensebtn').html('Senses~');
+            $('#langbtn').html('Lang');
+            $('#traitbtn').html('Traits');
+            $('.senseswin').attr('id', 'shown');
+            $('.langwin').attr('id', 'hidden');
+            $('.traitwin').attr('id', 'hidden');
+          });
+
+          $('#langbtn').click(function(){
+            $('#sensebtn').html('Senses');
+            $('#langbtn').html('Lang~');
+            $('#traitbtn').html('Traits');
+            $('.senseswin').attr('id', 'hidden');
+            $('.langwin').attr('id', 'shown');
+            $('.traitwin').attr('id', 'hidden');
+          });
+
+          $('#traitbtn').click(function(){
+            $('#sensebtn').html('Senses');
+            $('#langbtn').html('Lang');
+            $('#traitbtn').html('Traits~');
+            $('.senseswin').attr('id', 'hidden');
+            $('.langwin').attr('id', 'hidden');
+            $('.traitwin').attr('id', 'shown');
+          });
+
+          $('#arlBtn').click(function(){
+            //console.log('clicked');
+            if($('.arlSec').css('display') != 'none'){
+              $('.arlSec').css('display', 'none');
+              $('#arlBtn').html('show');
+            }else{
+              $('.arlSec').css('display', 'inherit');
+              $('#arlBtn').html('hide');
+            }
+          });
+
+          $('#actionbtn').click(function(){
+            $('#actionbtn').html('Actions~');
+            $('#reactionbtn').html('Reactions');
+            $('#legendbtn').html('Legend');
+            $('.actionswin').attr('id', 'shown');
+            $('.reactionwin').attr('id', 'hidden');
+            $('.legendwin').attr('id', 'hidden');
+          });
+
+          $('#reactionbtn').click(function(){
+            $('#actionbtn').html('Actions');
+            $('#reactionbtn').html('Reactions~');
+            $('#legendbtn').html('Legend');
+            $('.actionswin').attr('id', 'hidden');
+            $('.reactionwin').attr('id', 'shown');
+            $('.legendwin').attr('id', 'hidden');
+          });
+
+          $('#legendbtn').click(function(){
+            $('#actionbtn').html('Actions');
+            $('#reactionbtn').html('Reactions');
+            $('#legendbtn').html('Legend~');
+            $('.actionswin').attr('id', 'hidden');
+            $('.reactionwin').attr('id', 'hidden');
+            $('.legendwin').attr('id', 'shown');
+          });
+
+          $('#rivBtn').click(function(){
+            //console.log('clicked');
+            if($('.rivSec').css('display') != 'none'){
+              $('.rivSec').css('display', 'none');
+              $('#rivBtn').html('show');
+            }else{
+              $('.rivSec').css('display', 'inherit');
+              $('#rivBtn').html('hide');
+            }
+          });
+
+          $('#resistbtn').click(function(){
+            $('#resistbtn').html('Resist~');
+            $('#immunebtn').html('Immune');
+            $('#vulnerbtn').html('Vulner');
+            $('.resistwin').attr('id', 'shown');
+            $('.immunewin').attr('id', 'hidden');
+            $('.vulnerwin').attr('id', 'hidden');
+          });
+
+          $('#immunebtn').click(function(){
+            $('#resistbtn').html('Resists');
+            $('#immunebtn').html('Immune~');
+            $('#vulnerbtn').html('Vulner');
+            $('.resistwin').attr('id', 'hidden');
+            $('.immunewin').attr('id', 'shown');
+            $('.vulnerwin').attr('id', 'hidden');
+          });
+
+          $('#vulnerbtn').click(function(){
+            $('#resistbtn').html('Resist');
+            $('#immunebtn').html('Immune');
+            $('#vulnerbtn').html('Vulner~');
+            $('.resistwin').attr('id', 'hidden');
+            $('.immunewin').attr('id', 'hidden');
+            $('.vulnerwin').attr('id', 'shown');
+          });
+
+          //attaches a change event to all new monster text fields so we can tell when a monster needs to be Saved
+          //and when it gets saved
+          //this may need some modification so it gets set off when a sense, language, trait, or etc gets added
+          var attachChangeEvent = function(){
+            $('.newMonsterTextField').change(function(){
+              monsterName = $('input[name=name]').val();
+              //console.log($('#div-' + monsterName + '-btn').html() + ' has changed');
+              $('#div-' + monsterName + '-btn').html(monsterName + '***');
+            });
+            $('.newMonsterTextArea').change(function(){
+              monsterName = $('input[name=name]').val();
+              //console.log($('#div-' + monsterName + '-btn').html() + ' has changed');
+              $('#div-' + monsterName + '-btn').html(monsterName + '***');
+            });
+            $('.newMonsterHD').change(function(){
+              monsterName = $('input[name=name]').val();
+              //console.log($('#div-' + monsterName + '-btn').html() + ' has changed');
+              $('#div-' + monsterName + '-btn').html(monsterName + '***');
+            });
+          }
+
+          var loadNewMonsterEdit = function(){
+            $('#monstername').css('color', '');//clear css color just in case it got changed to red
             currentMonsterEdit = newMonsterEdit;
-            $('#monstername').html('Name: <input type=\'text\' name=\'name\' id=\'newMonsterTextField\' placeholder=\'Monster Name\'>');
+            $('#monstername').html('Name: <input type=\'text\' name=\'name\' class=\'newMonsterTextField\' placeholder=\'Monster Name\' value=\'\'>');
+            $('#rating').html('Rating: ' + currentMonsterEdit.c_rating);
             $('#type').html('Type: ' + currentMonsterEdit.type);
             $('#size').html('Size: ' + currentMonsterEdit.size);
             $('#ac').html('AC: ' + currentMonsterEdit.ac);
             $('#speed').html('Speed: ' + currentMonsterEdit.speed);
             $('#health').html('Health: ' + currentMonsterEdit.hp);
             $('#hit_dice').html('Hit Dice: ' + currentMonsterEdit.hit_dice.number + 'd' + currentMonsterEdit.hit_dice.value);
-            console.log(currentMonsterEdit);
-            for(ability in currentMonsterEdit.ability_scores)
-            {
+            $('#alignment').html('Alignment: ' + currentMonsterEdit.alignment);
+            //console.log(currentMonsterEdit);
+            //ability scores
+            for(ability in currentMonsterEdit.ability_scores){
               $('#ability-scores-' + ability + '-mod').css('display', 'none');
               //console.log(currentMonsterEdit.ability_scores[ability]);
               $('#ability-scores-' + ability).html(ability.charAt(0).toUpperCase() + ability.slice(1,3) + ': ' + currentMonsterEdit.ability_scores[ability]);
             }
+            //saving Throws
+            for(sthrow in currentMonsterEdit.saving_throws){
+              $('#throws-' + sthrow).html(sthrow.charAt(0).toUpperCase() + sthrow.slice(1,3) + ': ' + currentMonsterEdit.saving_throws[sthrow]);
+            }
+
+            //load in senses
+            //clear sense list
+            $('#senseList').html('Sense List:');
+
+            for(sense in currentMonsterEdit.senses){
+              var newRow = $('<div class=\'row\'></div>');
+              var newSenseName = $('<div class=\'col col-md-6\' id=\'senseName\'></div>');
+              var newSenseValue = $('<div class=\'col col-md-6\' id=\'senseValue\'></div>');
+              //console.log(currentMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+              newSenseName.html('Name: ' + currentMonsterEdit.senses[sense].sense);
+              newSenseValue.html('Value: ' + currentMonsterEdit.senses[sense].value);
+              newRow.append(newSenseName);
+              newRow.append(newSenseValue);
+              $('#senseList').append(newRow);
+            }
+
+            //load in Languages
+            $('#langList').html('Language List:');
+            for(lang in currentMonsterEdit.languages){
+              var newRowl = $('<div class=\'row\'></div>');
+              var newLangNamel = $('<div class=\'col col-md-6\' id=\'langName\'></div>');
+              var newLangSl = $('<div class=\'col col-md-3\' id=\'langSpeak\'></div>');
+              var newLangUl = $('<div class=\'col col-md-3\' id=\'langUnstd\'></div>');
+              //console.log(currentMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+              newLangNamel.html('Language: ' + currentMonsterEdit.languages[lang].language);
+              newLangSl.html('Speak: ' + currentMonsterEdit.languages[lang].speak);
+              newLangUl.html('Understand: ' + currentMonsterEdit.languages[lang].understand);
+              newRowl.append(newLangNamel);
+              newRowl.append(newLangSl);
+              newRowl.append(newLangUl);
+              $('#langList').append(newRowl);
+            }
+
+            //load in Traits
+            //clear trait list
+            $('#traitList').html('Trait List:');
+            console.log(currentMonsterEdit.special_traits);
+            for(trait in currentMonsterEdit.special_traits){
+              var newRow = $('<div class=\'row\'></div>');
+              var newTraitName = $('<div class=\'col col-md-5\' id=\'traitName\'></div>');
+              var newTraitNote = $('<div class=\'col col-md-7\' id=\'traitNote\'></div>');
+              //console.log(currentMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+              newTraitName.html('Trait: ' + currentMonsterEdit.special_traits[trait].trait);
+              newTraitNote.html('Description: ' + currentMonsterEdit.special_traits[trait].notes);
+              newRow.append(newTraitName);
+              newRow.append(newTraitNote);
+              $('#traitList').append(newRow);
+            }
+            attachChangeEvent();
           }
           //loads the monster editing html by default
-          loadMonsterEdit();
-          $('#newmonsterbtn').click(loadMonsterEdit);
+          loadNewMonsterEdit();
+          $('#newmonsterbtn').click(loadNewMonsterEdit);
+
+          //loads the monster to edit based on what div button was pressed
+          var loadMonsterEdit = function(){
+            //console.log($(this).html());
+            $('#monstername').css('color', '');//clear css color just in case it got changed to red
+            currentMonsterEdit = raw_sheet.monsters[$(this).html()];
+            //console.log(currentMonsterEdit);
+            $('#monstername').html('Name: <input type=\'text\' name=\'name\' class=\'newMonsterTextField\' placeholder=\'Monster Name\' value=' + $(this).html() + '>');
+            //console.log(currentMonsterEdit.type);
+            $('#type').html('Type:  <input type=\'text\' name=\'type\' class=\'newMonsterTextField\' placeholder=\'Monster Type\' value=\'' + currentMonsterEdit.type + '\'>');
+            $('#size').html('Size: <input type=\'text\' name=\'size\' class=\'newMonsterTextField\' placeholder=\'Size\' value=' + currentMonsterEdit.size + '>');
+            $('#ac').html('AC: <input type=\'text\' name=\'ac\' class=\'newMonsterTextField\' placeholder=\'AC\' value=' + currentMonsterEdit.ac + '>');
+            $('#speed').html('Speed: <input type=\'text\' name=\'speed\' class=\'newMonsterTextField\' placeholder=\'Speed\' value=' + currentMonsterEdit.speed + '>');
+            $('#health').html('Health: <input type=\'text\' name=\'hp\' class=\'newMonsterTextField\' placeholder=\'Hp\' value=' + currentMonsterEdit.hp + '>');
+            $('#hit_dice').html('Hit Dice: <input type=\'text\' name=\'hdnumber\' class=\'newMonsterHD\' value=' +  currentMonsterEdit.hit_dice.number + '>d<input type=\'text\' name=\'hdvalue\' class=\'newMonsterHD\' value=' + currentMonsterEdit.hit_dice.value + '>');
+            $('#rating').html('Rating: <input type=\'text\' name=\'c_rating\' class=\'newMonsterTextField\' placeholder=\'Rating\' value=' + currentMonsterEdit.c_rating + '>');
+            $('#alignment').html('Alignment: <input type=\'text\' name=\'alignment\' class=\'newMonsterTextField\' placeholder=\'Moral Alignment\' value=\'' + currentMonsterEdit.alignment + '\'>');
+            //console.log(currentMonsterEdit);
+            for(ability in currentMonsterEdit.ability_scores){
+              //console.log(currentMonsterEdit.ability_scores[ability]);
+              $('#ability-scores-' + ability).html(ability.charAt(0).toUpperCase() + ability.slice(1,3) + ': <input type=\'text\' name=' + ability + ' class=\'newMonsterTextField\' value=' + currentMonsterEdit.ability_scores[ability] + '>');
+              var stat = currentMonsterEdit.ability_scores[ability];
+              $('#ability-scores-' + ability + '-mod').html('Mod: ' + Math.floor((parseInt((stat == '') ? '0' : stat) - 10) / 2).toString());
+              $('#ability-scores-' + ability + '-mod').css('display', 'inline-block');
+            }
+            //load in saving Throws
+            for(sthrow in currentMonsterEdit.saving_throws){
+              $('#throws-' + sthrow).html(sthrow.charAt(0).toUpperCase() + sthrow.slice(1,3) + ': <input type=\'text\' name=throw-' + sthrow + ' class=\'newMonsterTextField\' value=' + currentMonsterEdit.saving_throws[sthrow] + '>');
+            }
+
+            //load in senses
+            //clear sense list
+            $('#senseList').html('Sense List:');
+            console.log(currentMonsterEdit.senses);
+            for(sense in currentMonsterEdit.senses){
+              var newRow = $('<div class=\'row\'></div>');
+              var newSenseName = $('<div class=\'col col-md-6\' id=\'senseName\'></div>');
+              var newSenseValue = $('<div class=\'col col-md-6\' id=\'senseValue\'></div>');
+              //console.log(currentMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+              newSenseName.html('Name: <input type=\'text\' name=\'sense\' class=\'newMonsterTextField\' placeholder=\'Sense\' value=\'' + currentMonsterEdit.senses[sense].sense + '\'>');
+              newSenseValue.html('Value: <input type=\'text\' name=\'value\' class=\'newMonsterTextField\' placeholder=\'Value\' value=\'' + currentMonsterEdit.senses[sense].value + '\'>');
+              newRow.append(newSenseName);
+              newRow.append(newSenseValue);
+              $('#senseList').append(newRow);
+            }
+            //add in empty sense row
+            var newRow = $('<div class=\'row\'></div>');
+            var newSenseName = $('<div class=\'col col-md-6\' id=\'senseName\'></div>');
+            var newSenseValue = $('<div class=\'col col-md-6\' id=\'senseValue\'></div>');
+            //console.log(newMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+            newSenseName.html('Name: ' + newMonsterEdit.senses[0].sense);
+            newSenseValue.html('Value: ' + newMonsterEdit.senses[0].value);
+            newRow.append(newSenseName);
+            newRow.append(newSenseValue);
+            $('#senseList').append(newRow);
+
+            //console.log(currentMonsterEdit.languages);
+            //load in languages
+            $('#langList').html('Language List:');
+            for(lang in currentMonsterEdit.languages){
+              var newRowf = $('<div class=\'row\'></div>');
+              var newLangNamef = $('<div class=\'col col-md-6\' id=\'langName\'></div>');
+              var newLangSf = $('<div class=\'col col-md-3\' id=\'langSpeak\'></div>');
+              var newLangUf = $('<div class=\'col col-md-3\' id=\'langUnstd\'></div>');
+              console.log(currentMonsterEdit.languages[lang].language);
+              newLangNamef.html('Language: <input type=\'text\' name=\'language\' class=\'newMonsterTextField\' placeholder=\'Language\' value=\'' + currentMonsterEdit.languages[lang].language + '\'>');
+              newLangSf.html('Speak: <input type=\'text\' name=\'speak\' class=\'newMonsterTextField\' placeholder=\'Yes/No\' value=\'' + currentMonsterEdit.languages[lang].speak + '\'>');
+              newLangUf.html('Undstnd: <input type=\'text\' name=\'understand\' class=\'newMonsterTextField\' placeholder=\'Yes/No\' value=\'' + currentMonsterEdit.languages[lang].understand + '\'>');
+              newRowf.append(newLangNamef);
+              newRowf.append(newLangSf);
+              newRowf.append(newLangUf);
+              $('#langList').append(newRowf);
+            }
+            //add in empty language row
+            var newRowe = $('<div class=\'row\'></div>');
+            var newLangNamee = $('<div class=\'col col-md-6\' id=\'langName\'></div>');
+            var newLangSe = $('<div class=\'col col-md-3\' id=\'langSpeak\'></div>');
+            var newLangUe = $('<div class=\'col col-md-3\' id=\'langUnstd\'></div>');
+            //console.log(currentMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+            newLangNamee.html('Language: ' + newMonsterEdit.languages[0].language);
+            newLangSe.html('Speak: ' + newMonsterEdit.languages[0].speak);
+            newLangUe.html('Undstnd: ' + newMonsterEdit.languages[0].understand);
+            newRowe.append(newLangNamee);
+            newRowe.append(newLangSe);
+            newRowe.append(newLangUe);
+            $('#langList').append(newRowe);
+
+            //load in Traits
+            //clear trait list
+            $('#traitList').html('Trait List:');
+            console.log(currentMonsterEdit.special_traits);
+            for(trait in currentMonsterEdit.special_traits){
+              var newRow = $('<div class=\'row\'></div>');
+              var newTraitName = $('<div class=\'col col-md-5\' id=\'traitName\'></div>');
+              var newTraitNote = $('<div class=\'col col-md-7\' id=\'traitNote\'></div>');
+              //console.log(currentMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+              newTraitName.html('Trait: <input type=\'text\' name=\'trait\' class=\'newMonsterTextField\' placeholder=\'Sense\' value=\'' + currentMonsterEdit.special_traits[trait].trait + '\'>');
+              newTraitNote.html('Description: <textarea name=\'notes\' class=\'newMonsterTextArea\' placeholder=\'Description of trait...\'>' + currentMonsterEdit.special_traits[trait].notes + '</textarea>');
+              newRow.append(newTraitName);
+              newRow.append(newTraitNote);
+              $('#traitList').append(newRow);
+            }
+            //add in empty sense row
+            var newRow = $('<div class=\'row\'></div>');
+            var newTraitName = $('<div class=\'col col-md-5\' id=\'traitName\'></div>');
+            var newTraitNote = $('<div class=\'col col-md-7\' id=\'traitNote\'></div>');
+            //console.log(newMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+            newTraitName.html('Name: ' + newMonsterEdit.special_traits[0].trait);
+            newTraitNote.html('Value: ' + newMonsterEdit.special_traits[0].notes);
+            newRow.append(newTraitName);
+            newRow.append(newTraitNote);
+            $('#traitList').append(newRow);
+
+            attachChangeEvent();
+          }
+
+          $('#addSense').click(function(){
+            //console.log('clicked addSense');
+            //save previously added row
+            sName = $('#senseList').last().find('#senseName').children().val();
+            sValue = $('#senseList').last().find('#senseName').children().val();
+            if(sName == '') return;
+            currentMonsterEdit.senses.push({'sense' : sName, 'value': sValue});
+            //make new row
+            var newRow = $('<div class=\'row\'></div>');
+            var newSenseName = $('<div class=\'col col-md-6\' id=\'senseName\'></div>');
+            var newSenseValue = $('<div class=\'col col-md-6\' id=\'senseValue\'></div>');
+            //console.log(newMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+            newSenseName.html('Name: ' + newMonsterEdit.senses[0].sense);
+            newSenseValue.html('Value: ' + newMonsterEdit.senses[0].value);
+            newRow.append(newSenseName);
+            newRow.append(newSenseValue);
+            $('#senseList').append(newRow);
+
+            attachChangeEvent();
+          });
+
+          $('#addLang').click(function(){
+            //console.log()
+            //save previously added row
+            var lName1 = $('#langList').last().find('#langName').children().val();
+            var lSpeak1 = $('#langList').last().find('#langSpeak').children().val();
+            var lUnstd1 = $('#langList').last().find('#langUnstd').children().val();
+            console.log('>' + lName1);
+            if(lName1 == '') return;
+            currentMonsterEdit.languages.push({'language' : lName1, 'speak': lSpeak1, 'understand': lUnstd1});
+
+            //add in empty language row
+            var newRow1 = $('<div class=\'row\'></div>');
+            var newLangName1 = $('<div class=\'col col-md-6\' id=\'langName\'></div>');
+            var newLangS1 = $('<div class=\'col col-md-3\' id=\'langSpeak\'></div>');
+            var newLangU1 = $('<div class=\'col col-md-3\' id=\'langUnstd\'></div>');
+            //console.log(currentMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+            newLangName1.html('Language: ' + newMonsterEdit.languages[0].language);
+            newLangS1.html('Speak: ' + newMonsterEdit.languages[0].speak);
+            newLangU1.html('Undstnd: ' + newMonsterEdit.languages[0].understand);
+            newRow1.append(newLangName1);
+            newRow1.append(newLangS1);
+            newRow1.append(newLangU1);
+            $('#langList').append(newRow1);
+
+            attachChangeEvent();
+          });
+
+          $('#addTrait').click(function(){
+            //console.log('clicked addSense');
+            //save previously added row
+            tName = $('#traitList').last().find('#traitName').children().val();
+            tNote = $('#traitList').last().find('#traitNote').children().val();
+            if(tName == '') return;
+            currentMonsterEdit.special_traits.push({'trait' : tName, 'notes': tNote});
+            //add in empty trait row
+            var newRow = $('<div class=\'row\'></div>');
+            var newTraitName = $('<div class=\'col col-md-5\' id=\'traitName\'></div>');
+            var newTraitNote = $('<div class=\'col col-md-7\' id=\'traitNote\'></div>');
+            //console.log(newMonsterEdit.senses[sense].sense + '>>' + currentMonsterEdit.senses[sense].value);
+            newTraitName.html('Name: ' + newMonsterEdit.special_traits[0].trait);
+            newTraitNote.html('Value: ' + newMonsterEdit.special_traits[0].notes);
+            newRow.append(newTraitName);
+            newRow.append(newTraitNote);
+            $('#traitList').append(newRow);
+
+            attachChangeEvent();
+          });
+
+          $('#addmonsterbtn').click(function(){
+            //the monster should at least have a name for it to be added.
+            //maybe have a 'complete' flag that is false if any needed info is missing so we don't add an incomplete monster to the Encounter
+            monsterName = $('input[name=name]').val();
+            if(monsterName == ''){
+              $('#monstername').css('color', 'red');
+              return;
+            }else{
+              $('#monstername').css('color', '');
+            }
+
+            //copy the newMonsterObject
+            monsterToSave = JSON.parse(JSON.stringify(newMonsterEdit));
+            //update object with fields that have been entered
+            for(attr in monsterToSave)
+            {
+              switch(attr){
+                case 'hit_dice':
+                  monsterToSave['hit_dice']['number'] = $('input[name=hdnumber]').val();
+                  monsterToSave['hit_dice']['value'] = $('input[name=hdvalue]').val();
+                  break;
+                case 'ability_scores':
+                  for(as in monsterToSave['ability_scores']){
+                    //console.log(as + ' >> ' + $('input[name=' + as + ']').val());
+                    monsterToSave['ability_scores'][as] = $('input[name=' + as + ']').val();
+                  }
+                  break;
+                case 'saving_throws':
+                  for(th in monsterToSave['saving_throws']){
+                    //console.log(as + ' >> ' + $('input[name=' + as + ']').val());
+                    monsterToSave['saving_throws'][th] = $('input[name="throw-' + th + '"]').val();
+                  }
+                  break;
+                case 'skills':
+                  break;
+                case 'resistances':
+                  break;
+                case 'vulnerabilities':
+                  break;
+                case 'immunities':
+                  break;
+                case 'senses':
+                  //clear senses array
+                  monsterToSave['senses'].splice(0,monsterToSave['senses'].length);
+                  $('#senseList').children().each(function(){
+                    var sName = $(this).find('#senseName').children().val();
+                    var sVal = $(this).find('#senseValue').children().val();
+                    console.log(sName + ">>" + sVal);
+                    if(sName == '') return;
+                    monsterToSave['senses'].push({'sense': sName, 'value': sVal});
+                  });
+                  break;
+                case 'languages':
+                  monsterToSave['languages'].splice(0,monsterToSave['languages'].length);
+                  $('#langList').children().each(function(){
+                    let lName = $(this).find('#langName').children().val();
+                    let lSpk = $(this).find('#langSpeak').children().val();
+                    let lUnd = $(this).find('#langUnstd').children().val();
+                    console.log(lName);
+                    if(lName == '') return;
+                    monsterToSave['languages'].push({'language': lName, 'speak': lSpk, 'understand': lUnd});
+                  });
+                  break;
+                case 'telepathy':
+                  break;
+                case 'special_traits':
+                  //clear senses array
+                  monsterToSave['special_traits'].splice(0,monsterToSave['special_traits'].length);
+                  $('#traitList').children().each(function(){
+                    var tName = $(this).find('#traitName').children().val();
+                    var tNote = $(this).find('#traitNote').children().val();
+                    //console.log(sName + ">>" + sVal);
+                    if(tName == '') return;
+                    monsterToSave['special_traits'].push({'trait': tName, 'notes': tNote});
+                  });
+                  break;
+                case 'actions':
+                  break;
+                case 'reactions':
+                  break;
+                case 'legendary_actions':
+                  break;
+                default:
+                  //console.log(attr + ' >> ' + $('input[name=' + attr + ']').val());
+                  monsterToSave[attr] = $('input[name=' + attr + ']').val();
+                  break;
+              }
+            }
+            //did monster exist
+            if(!raw_sheet['monsters'].hasOwnProperty(monsterName)){//if monster already exists we were just updating it so don't add a new div
+              //add new div button for the monster to each monster list element
+              var newdiv = $('<div class=\'col\' id=\'div-'+monsterName+'-btn\'>' + monsterName + '</div>');
+              newdiv.click(loadMonsterEdit);
+              $('#mmonsterlist').append(newdiv);
+            }else{
+              var str = $('#div-' + monsterName + '-btn').html();
+              if(str.slice(-1) === '*'){
+                str = str.slice(0, -3);
+                console.log(str);
+                $('#div-' + monsterName + '-btn').html(str);
+              }
+            }
+            //add new monster to the raw json
+            raw_sheet['monsters'][monsterName] = monsterToSave;
+            console.log(raw_sheet['monsters'][monsterName]);
+          });
           //get monster divs from monster list in the edit monster div
           $('#mmonsterlist').children('div').each(function(){
             //the next div is the one with the json in it
             //var monsterjson = JSON.parse($(this).children().html());
-            $(this).click(function(){
-              currentMonsterEdit = raw_sheet.monsters[$(this).html()];
-              $('#monstername').html('Name: ' + $(this).html());
-              $('#type').html('Type: ' + currentMonsterEdit.type);
-              $('#size').html('Size: ' + currentMonsterEdit.size);
-              $('#ac').html('AC: ' + currentMonsterEdit.ac);
-              $('#speed').html('Speed: ' + currentMonsterEdit.speed);
-              $('#health').html('Health: ' + currentMonsterEdit.hp);
-              $('#hit_dice').html('Hit Dice: ' + currentMonsterEdit.hit_dice.number + 'd' + currentMonsterEdit.hit_dice.value);
-              //console.log(currentMonsterEdit);
-              for(ability in currentMonsterEdit.ability_scores)
-              {
-                //console.log(currentMonsterEdit.ability_scores[ability]);
-                $('#ability-scores-' + ability).html(ability.charAt(0).toUpperCase() + ability.slice(1,3) + ': ' + currentMonsterEdit.ability_scores[ability]);
-                $('#ability-scores-' + ability + '-mod').html('Mod: ' + Math.floor((parseInt(currentMonsterEdit.ability_scores[ability]) - 10) / 2).toString());
-                $('#ability-scores-' + ability + '-mod').css('display', 'inline-block');
-              }
-            });
+            $(this).click(loadMonsterEdit);
+            $(this).attr('id', 'div-' + $(this).html() + '-btn');
           });
           //get monster divs from monster list in the encounter div
           $('#emonsterlist').children('div').each(function(){
             //the next div is the one with the json in it
             //var monsterjson = JSON.parse($(this).children().html());
             $(this).click(function(){
-              console.log($(this).html());
-              //$('#dmmonsterinfo').html($(this).html());
+              //console.log($(this).html());
+              $('#dmmonsterinfo').html($(this).html());
             });
           });
           break;
@@ -494,7 +1049,7 @@ $(document).ready(function(){
       ` placeholder="Name"> <input class="in add_text add_gem"` +
       ` id=${num_id} placeholder="Amount">` +
       `<button class="btn add_text sub_com" id=${sub_id}>Submit</button></div></div>`);
-      
+
       //register handler for newly created field + button if an add on is submitted
       $('#' + sub_id).click(function() {
         let in_id = this.id.replace('sub', 'input');
@@ -546,7 +1101,7 @@ $(document).ready(function(){
           $('#change_attrs').append(gem_html);
         }
         let msg = JSON.stringify({type: 'add_gem', attr: in_field, change: num_field});
-        socket.send(msg);    
+        socket.send(msg);
       });
       return sheet_json;
     }
@@ -587,7 +1142,7 @@ $(document).ready(function(){
           `<div class="col wepfields"><input class="in add_text add_table" id=${not_id}` +
           ` placeholder="Notes"></div></div><div class="row"><div class="col wepfields title">` +
           `<button class="btn add_text sub_tab" id=${sub_id}>Submit</button></div></div>`);
-          
+
           //register handler for newly created weapon + button if an add on is submitted
           $('#' + sub_id).click(function() {
             // get all fields
@@ -621,7 +1176,7 @@ $(document).ready(function(){
             //now loop thru and clear fields
             Object.keys(field_arr).forEach((key) => {
               $('#' + key)[0].setCustomValidity("");
-              $('#' + key).val(''); 
+              $('#' + key).val('');
             });
             //now, go thru each, update HTML and JSON
             //closest col in hierarchy will be where to insert new wep attr
@@ -631,7 +1186,7 @@ $(document).ready(function(){
               let parent = $('#' + key).closest('.col');
               parent.html(field_arr[key]);   //add new text
               let raw_key = key.replace('add_wep_', '');  //convert id to json key
-              wep_obj[raw_key] = field_arr[key]; 
+              wep_obj[raw_key] = field_arr[key];
             });
             if (!sheet_json.hasOwnProperty('weps')) {
               sheet_json['weps'] = [];
@@ -724,7 +1279,7 @@ $(document).ready(function(){
             //now loop thru and clear fields
             Object.keys(field_arr).forEach((key) => {
               $('#' + key)[0].setCustomValidity("");
-              $('#' + key).val(''); 
+              $('#' + key).val('');
             });
             //now, go thru each, update HTML and JSON
             //closest col in hierarchy will be where to insert new spell attr
@@ -747,7 +1302,7 @@ $(document).ready(function(){
                 parent.html(field_arr[key]);   //add new text
               }
               let raw_key = key.replace('add_spell_', '');  //convert id to json key
-              spell_obj[raw_key] = field_arr[key]; 
+              spell_obj[raw_key] = field_arr[key];
             });
             //add special cases
             let spec_html = comp_arr[0] + ';<br>' + comp_arr[1];
@@ -824,7 +1379,7 @@ $(document).ready(function(){
             //now loop thru and clear fields
             Object.keys(field_arr).forEach((key) => {
               $('#' + key)[0].setCustomValidity("");
-              $('#' + key).val(''); 
+              $('#' + key).val('');
             });
             submit = true;
             //now, go thru each, update HTML and JSON
@@ -835,7 +1390,7 @@ $(document).ready(function(){
               let parent = $('#' + key).closest('.col');
               parent.html(field_arr[key]);   //add new text
               let raw_key = key.replace('add_item_', '');  //convert id to json key
-              item_obj[raw_key] = field_arr[key]; 
+              item_obj[raw_key] = field_arr[key];
             });
             if (full_sheet) {
               //since item added, we must update current carry weight ONLY IF NOT CREATION
@@ -979,7 +1534,6 @@ $(document).ready(function(){
           $('#' + attr + '_mod').html(curr_mod);
           break;
         case 'hp':
-        case 'hero':
         case 'curr_speed':
           curr = Number(raw_sheet[attr]); //retrieve current value
           if (add_type){
@@ -1061,6 +1615,13 @@ $(document).ready(function(){
     $('#create_sheet').click(function() {
       //ask for blank html to fill out
       let msg = JSON.stringify({type: 'get_blank'});
+      socket.send(msg);
+    });
+
+    //handle if user wants to load a saved psheet, must ask server to load list of all
+    $('#load_sheet').click(function() {
+      //ask for list of all sheets owned by user
+      let msg = JSON.stringify({type: 'load_sheets'});
       socket.send(msg);
     });
 
