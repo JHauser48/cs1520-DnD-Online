@@ -16,7 +16,7 @@ $(document).ready(function(){
     var socket_uri = scheme + window.location.hostname + ':' + location.port + '/play';
     socket = new WebSocket(socket_uri);         //create socket for URI
     var sheet = isPlayer ? $('#sheet') : $('#dmstuff'); //save sheet element for adding in sheet/DM info
-    var raw_sheet; //JSON version of sheet, use for updates during session, send back to server at end for updating in DB
+    var raw_sheet = {}; //JSON version of sheet, use for updates during session, send back to server at end for updating in DB
     var l2x;      //used for players that need xp for next level, map level to needed XP
     var cond_list = ['Normal', 'Blinded', 'Charmed', 'Deafened', 'Fatigued', 'Frightened', 'Grappled',
     'Incapacitated', 'Invisible', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained',

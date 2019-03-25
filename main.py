@@ -135,8 +135,13 @@ def remove_client(uname, room):
   global r_to_client
   global u_to_client
   to_rem = u_to_client.pop(uname) # remove leaving client's entry and get val
+  print(to_rem) # DEBUG
   if to_rem in r_to_client[room]:
+    print('removing client') # DEBUG
     r_to_client[room].remove(to_rem)
+  if not r_to_client[room]:
+    print(f'room {room} is empty!') # DEBUG
+    r_to_client.pop(room) # remove room
   if to_rem in last_client:
     last_client.remove(to_rem)  # client gone
 
@@ -158,13 +163,15 @@ def decide_request(req, uname, isPlayer, clients, room):
     resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
-    # also need to update sheet for leaving user, key = UID + title
-    title = req['msg']['sheet_title']
-    uid = uname
-    if isPlayer:
+    # also need to update sheet for leaving user, key = UID + title, IF NOT EMPTY
+    if req['msg']:
+      title = req['msg']['sheet_title']
+      uid = uname
+      if isPlayer:
         mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
-    else:
+      else:
         mongo.db['dmsheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
+    print(f'{uname} is leaving')
     remove_client(uname, room)
     resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
   elif req_type == 'get_sheet':
@@ -273,7 +280,9 @@ def chat_socket(ws):
     global u_to_client
     msg = loads(message) # convert to dict
     # now process message dependent on type + room, clients
-    clients = list(ws.handler.server.clients.values())
+    if ws.handler.server.clients:
+      print(ws.handler.server.clients.keys());      # DEBUG
+      clients = list(ws.handler.server.clients.values())
     room = session.get('room')
     resp = decide_request(msg, uname, isPlayer, clients, room)
     # check if broadcast or single event
@@ -311,6 +320,8 @@ def join_post():
   # store session info for use
   session['name'] = request.form['uname']
   session['room'] = request.form['rname']
+  print(request.environ.get('HTTP_X_REAL_IP', request.remote_addr))     # DEBUG
+  print(request.environ.get('REMOTE_PORT')) # DEBUG
   session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
   return redirect(url_for('.play'), code=302)
 
