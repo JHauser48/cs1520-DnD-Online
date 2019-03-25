@@ -203,7 +203,7 @@ def decide_request(req, uname, isPlayer, clients, room):
     else:
       # raw JSON of sheet sent in message, store in db using UID as key
       raw_sheet = req['msg']
-      raw_sheet['uid'] = session['u_token'] # TODO: CHANGE THIS TO THE SESSION
+      raw_sheet['uid'] = session['u_token']
       if isPlayer:
         mongo.db['psheets'].insert_one(raw_sheet)
       else:
@@ -357,7 +357,7 @@ def login_account():
     user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
     user_token = user_acc['idToken']
     print(user_token)
-    session['u_token'] = user_token
+    session['u_token'] = str(request.form['email'])
     return redirect('/static/index.html', code=302)
   except:
     return redirect('/static/invalid.html', code=302)
