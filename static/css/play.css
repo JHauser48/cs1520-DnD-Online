@@ -114,7 +114,18 @@ body{
 }
 
 #dmtextarea{
+  rows: "30";
+  cols: "50";
   width: 100%;
+  height: 100%;
+}
+
+#sheet_title_input{
+  width: 100%;
+}
+
+.dmnotes{
+  display: inline-block;
   height: 100%;
 }
 

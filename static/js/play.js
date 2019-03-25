@@ -350,9 +350,10 @@ $(document).ready(function(){
           console.log(curr_msg);     //DEBUG
           console.log(typeof(curr_msg));
           curr_msg.forEach((save_sheet) => {
+            console.log(save_sheet);
             all_sheets += `<div class="row"><div class="col title">`+
-            `Sheet: <span class="highlight">${save_sheet.sheet_title}</span> Character Name: ` +
-            `<span class="highlight">${save_sheet.name}</span>` +
+            `Sheet: <span class="highlight">${save_sheet.sheet_title}</span>` +
+            ((isPlayer == true) ? `Character Name: <span class="highlight">${save_sheet.name}</span>` : ``) +
             `<button class="btn choose_sheet" id="${save_sheet.sheet_title}">Choose</button>`+
             `</div></div>`;
           });
@@ -365,12 +366,36 @@ $(document).ready(function(){
             socket.send(msg);
           });
           break;
+        case 'create_dmsheet':
+          $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load
+          sheet.css('display', 'inline-block');    //unhide sheet]
+          sheet.html(data.msg);
+          var raw = data.raw;
+          $('#tbtn').click(function(){
+            var title = $('#dmtitle').val();
+            if(title == ''){
+              var em = $('<div class="col"></div>');
+              em.html('Please enter a title for your dm sheet.');
+              $('#err').html(em);
+              return;
+            }
+            raw['sheet_title'] = title;
+            let msg = JSON.stringify({type: 'get_sheet', msg: raw});
+            socket.send(msg);
+          });
+          $('#dmtitle').change(function(){
+            $('#err').html('');
+          });
+          break;
         case 'dmstuff':
           //server has sent the dm sheet
-          $('.btn.but_dm').remove();       //remove load/create buttons on sheet load
+          $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load
           sheet.css('display', 'inline-block');    //unhide sheet]
           sheet.html(data.msg);   //add sheet to HTML
           raw_sheet = data.raw; //store JSON
+          $('#dmtextarea').change(function(){
+            raw_sheet['notes'] = $('#dmtextarea').val();
+          });
           //get all the content divs for easy access later
           arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];//dm sheet div button
           //need to be defined here so we know the dm sheet has been loaded

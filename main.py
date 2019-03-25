@@ -161,8 +161,10 @@ def decide_request(req, uname, isPlayer, clients, room):
     # also need to update sheet for leaving user, key = UID + title
     title = req['msg']['sheet_title']
     uid = uname
-    mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]},
-    req['msg'])
+    if isPlayer:
+        mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
+    else:
+        mongo.db['dmsheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
     remove_client(uname, room)
     resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
   elif req_type == 'get_sheet':
@@ -174,22 +176,29 @@ def decide_request(req, uname, isPlayer, clients, room):
       uid = uname
       title = req['title']
       # find requested sheet in DB
-      found_raw = mongo.db['psheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
-      jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
       if isPlayer:
+        found_raw = mongo.db['psheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
+        jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
         resp = {'msg': data, 'raw': found_raw, 'type': 'sheet', 'l2x': level_to_xp}
+      else:
+        found_raw = mongo.db['dmsheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
+        jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
+        resp = {'msg': data, 'raw': found_raw, 'type': 'dmstuff'}
     else:
       # raw JSON of sheet sent in message, store in db using UID as key
       raw_sheet = req['msg']
       #raw_sheet['uid'] = session['u_token']
       raw_sheet['uid'] = uname # TODO: CHANGE THIS TO THE SESSION
-      mongo.db['psheets'].insert_one(raw_sheet)
+      if isPlayer:
+        mongo.db['psheets'].insert_one(raw_sheet)
+      else:
+        mongo.db['dmsheets'].insert_one(raw_sheet)
       # db.collection(u'psheets').add(raw_sheet)
       jsonstr, data = get_player_stats(uname, isPlayer, room, raw_sheet)
       if isPlayer:
           resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
       else:
-          resp = {'msg': data, 'raw': jsonstr, 'type': 'dmstuff'}
+          resp = {'msg': data, 'raw': raw_sheet, 'type': 'dmstuff'}
   elif req_type == 'change_attr':
     # someone changed a numeric attribute
     direction = 'increased' if req['dir'] else 'decreased'
@@ -217,14 +226,30 @@ def decide_request(req, uname, isPlayer, clients, room):
     resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
     '.', 'color': 'chocolate', 'type': 'status'}
   elif req_type == 'get_blank':
-    # player asking for blank html form to fill out
-    blank_form = get_sheet_form()
-    resp = {'msg': blank_form, 'type': 'create_psheet'}
+    if isPlayer:
+      # player asking for blank html form to fill out
+      blank_form = get_sheet_form()
+      resp = {'msg': blank_form, 'type': 'create_psheet'}
+    else:
+      raw = {
+        'sheet_title' : '',
+        'notes' : '',
+        'monsters' : {},
+        'encounter' : {
+          'monsters': [],
+          'turnorder': []
+        }
+      }
+      blank_form = get_dm_sheet_form()
+      resp = {'msg': blank_form, 'raw': raw, 'type': 'create_dmsheet'}
   elif req_type == 'load_sheets':
     # player asking for list of their sheets, get from DB
     #uid = session['u_token']
     uid = uname # TODO: CHANGE THIS TO SESSION
-    all_sheets = dumps(mongo.db['psheets'].find({'uid': uid})) # store list of all sheets
+    if isPlayer:
+      all_sheets = dumps(mongo.db['psheets'].find({'uid': uid})) # store list of all sheets
+    else:
+      all_sheets = dumps(mongo.db['dmsheets'].find({'uid': uid}))
     resp = {'msg': all_sheets, 'type': 'sheet_list'}
   return dumps(resp) # convert JSON to string
 
@@ -317,6 +342,22 @@ def login_account():
     return redirect('/static/index.html', code=302)
   except:
     return 'something went wrong'
+
+def get_dm_sheet_form():
+  doc, tag, text= Doc().tagtext()
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col title'):
+      text('~ Name Your DM Sheet ~')
+  with tag('div', klass = 'row'):
+    with tag('div', klass = 'col col-md-10'):
+      doc.asis('<input type="text" id="dmtitle" placeholder="Title">')
+    with tag('div', klass = 'col col-md-2 no-border'):
+      with tag('div', klass = '.btn', id='tbtn'):
+        text('Enter Title')
+  with tag('div', klass = 'row', id='err'):
+    text('')
+  resp = doc.getvalue()
+  return resp
 
 # helper to build HTML for user creating new sheet
 def get_sheet_form():
@@ -812,222 +853,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
 
   else:
     #fake response and probably wont have the same parameters as a real one
-    raw_resp = {
-      'notes' : 'here are my notes we can just save this as plaintext maybe i will find a \nway to make a rich text editor so we can format \nthings better that would be cool.',
-      'monsters' : {
-        'Aarakocra' : {
-          'size':'Medium',#size of monster
-          'type':'Humanoid (aarakocra)',#idk if this is what its called
-          'alignment': 'Neutral Good',#for role playing
-          'ac': '12',#armor class
-          'hp': '13',#hit Points
-          'hit_dice': { #used to generate how many hit points a monster has
-            'number': '3', #number of dice
-            'value' : '8', #dice value (20 => d20 etc)
-          },
-          'speed': '20ft', #walking speed of the monster will worry about the other kinds of speed a monster can have later
-          'ability_scores' : { #abillity scores of the monster
-            'str' : '10',
-            'dex' : '14',
-            'const' : '10',
-            'intell': '11',
-            'wis' : '12',
-            'char' : '11'
-          },
-          'saving_throws' : { #bonuses to saving throws form : "+10", "+0", "-3", etc
-            'str' : '',
-            'dex' : '',
-            'const' : '',
-            'intell': '',
-            'wis' : '',
-            'char' : ''
-          },
-          'c_rating' : '1/4', #challenge rating of the monster (have to think about the proficency bonuses involved with challenge rating)
-          'skills' : [{
-            'skill_name': 'Perception',
-            'ability' : 'wis',
-            'mod': '+5'
-          }], #list of skills the monster has form: {'skill-name': '', 'ability': '', 'mod': ''}
-          'resistances' : [], #list of damage types the monster has a resistance to
-          'vulnerabilities' : [], #list of damage types the monster has a vulnerability to
-          'immunities' : [], #list of damage types the monster has an immunity to
-          'senses' : [{
-            'sense' : 'passive perception',
-            'value' : '17'
-          }], #list of senses and the radius of that sense that the monster has form {'sense': '', 'radius': ''}
-          'languages' : [], #languages the monster can speak form: {'language': '', 'speak': '', 'understand': ''}
-          'telepathy' : {'radius' : ''}, #if radius is non zero then the monster has telepathy probably will integrate into the language portion of the monster shee
-          'special_traits' : [{
-            'trait' : 'Dive Attack',
-            'notes' : 'If the aarakocra is flying and dives at least 30 feet straight toward the target and then hits is with a melee weapon attack, the attack deal an extra 1d6 damage to the target'
-          }], # special traits that are relevant to combat form: {'trait': '', 'notes' : ''}
-          'actions' : [{
-            'action_type': 'weapon attack',
-            'name' : 'Talon',
-            'type' : 'melee',
-            'reach' : '5ft',
-            'min_range': '',
-            'max_range': '',
-            'hit_mod': '+4',
-            'damage' : {
-              'type' : 'slashing',
-              'number' : '1',
-              'value' : '4',
-              'mod' : 'dex'
-            },
-            'notes' : ''
-          },{
-            'action-type': 'weapon attack',
-            'name' : 'Javelin',
-            'type' : 'melee/ranged',
-            'reach' : '5ft',
-            'min_range': '30ft',
-            'max_range': '120ft',
-            'hit-mod': '+4',
-            'damage' : {
-              'type' : 'piercing',
-              'number' : '1',
-              'value' : '6',
-              'mod' : 'dex'
-            },
-            'notes' : ''
-          }], #a list of actions that the monster can perform the form of each action varies on the type of action
-          'reactions' : [], # a list of reactions a monster can have
-          'legendary_actions' : {
-            'num_action' : '',
-            'actions' : []
-          }
-        },
-        'Goristro' : {
-          'size':'Huge',#size of monster
-          'type':'Fiend (Demon)',#idk if this is what its called
-          'alignment': 'Chaotic Evil',#for role playing
-          'ac': '19',#armor class
-          'hp': '310',#hit Points
-          'hit_dice': { #used to generate how many hit points a monster has
-            'number': '23', #number of dice
-            'value' : '12' #dice value (20 => d20 etc)
-          },
-          'speed': '40ft', #walking speed of the monster will worry about the other kinds of speed a monster can have later
-          'ability_scores' : { #abillity scores of the monster
-            'str' : '25',
-            'dex' : '11',
-            'const' : '25',
-            'intell': '6',
-            'wis' : '13',
-            'char' : '14'
-          },
-          'saving_throws' : { #bonuses to saving throws form : "+10", "+0", "-3", etc
-            'str' : '+13',
-            'dex' : '+6',
-            'const' : '+13',
-            'intell': '',
-            'wis' : '+7',
-            'char' : ''
-          },
-          'c_rating' : '17', #challenge rating of the monster (have to think about the proficency bonuses involved with challenge rating)
-          'skills' : [{
-            'skill_name': 'Perception',
-            'ability' : 'wis',
-            'mod': '+7'
-          }], #list of skills the monster has form: {'skill-name': '', 'ability': '', 'mod': ''}
-          'resistances' : ['cold', 'fire', 'lightning', 'bludgeoning', 'piercing', 'slashing'], #list of damage types the monster has a resistance to
-          'vulnerabilities' : [], #list of damage types the monster has a vulnerability to
-          'immunities' : ['poison'], #list of damage types the monster has an immunity to
-          'senses' : [{
-            'sense' : 'darkvision',
-            'value' : '120ft'
-          },{
-            'sense' : 'passive perception',
-            'value': '17'
-          }], #list of senses and the value of that sense that the monster has form {'sense': '', 'value': ''}
-          'languages' : [{
-            'language':'Abyssal',
-            'speak' : 'true',
-            'understand' : 'true'
-          }], #languages the monster can speak form: {'language': '', 'speak': '', 'understand': ''}
-          'telepathy' : {'radius' : ''}, #if radius is non zero then the monster has telepathy probably will integrate into the language portion of the monster shee
-          'special_traits' : [{
-            'trait' : 'Charge',
-            'notes' : 'If the goristro moves at least 15 feet straight toward a target and then hits it with a gore attack on the same turn, the target takes an extra 7d10 piercing damage. If the target is a creature, it must succeed on a DC 21 Strength saving throw or be pushed up to 20 feet away and knocked prone.'
-          },{
-            'trait' : 'Labyrinthine Recall',
-            'notes' : 'The goristro can perfectly recall any path it has traveled.'
-          },{
-            'trait' : 'Magic Resistence',
-            'notes' : 'The goristro has advantage on saving throws against spells and other magical effects.'
-          },{
-            'trait' : 'Siege Monster',
-            'notes' : 'The goristro deals double damage to objects and structures.'
-          }], # special traits that are relevant to combat form: {'trait': '', 'notes' : ''}
-          'actions' : [{
-            'action_type' : 'other',
-            'name' : 'Multiattack',
-            'notes' : 'The goristro makes three attacks: two with its fists and one with its hoof.'
-          },{
-            'action_type': 'weapon attack',
-            'name' : 'Fist',
-            'type' : 'melee',
-            'reach' : '10ft',
-            'min_range': '',
-            'max_range': '',
-            'hit_mod': '+13',
-            'damage' : {
-              'type' : 'bludgeoning',
-              'number' : '3',
-              'value' : '8',
-              'mod' : 'str'
-            },
-            'notes' : ''
-          },{
-            'action_type': 'weapon attack',
-            'name' : 'Hoof',
-            'type' : 'melee',
-            'reach' : '5ft',
-            'min_range': '',
-            'max_range': '',
-            'hit_mod': '+13',
-            'damage' : {
-              'type' : 'bludgeoning',
-              'number' : '3',
-              'value' : '10',
-              'mod' : 'str'
-            },
-            'notes' : 'If the target is a creature, it must succeed on a DC 21 Strength saving throw or be knocked prone.'
-          },{
-            'action_type': 'weapon attack',
-            'name' : 'Gore',
-            'type' : 'melee',
-            'reach' : '10ft',
-            'min_range': '',
-            'max_range': '',
-            'hit_mod': '+13',
-            'damage' : {
-              'type' : 'piercing',
-              'number' : '7',
-              'value' : '10',
-              'mod' : 'str'
-            },
-            'notes' : ''
-          }], #a list of actions that the monster can perform the form of each action varies on the type of action
-          'reactions' : [], # a list of reactions a monster can have
-          'legendary_actions' : {
-            'num_action' : '',
-            'actions' : []
-          }
-        }
-      },
-      'encounter' : {
-        'monsters':[{
-          'name' : 'Big man',
-          'type' : 'Goristro'
-        },{
-          'name' : 'bird man',
-          'type' : 'Aarakocra'
-        }],
-        'turnorder':[]
-      }
-    }
+
     # use dict to build HTML using library
     doc, tag, text = Doc().tagtext()
     with tag('div', klass = 'row'):
@@ -1042,8 +868,10 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
         text('Notes')
     with tag('div', klass = 'row dmcontent'):
       with tag('div', klass = 'col dmnotes', id='shown'):
-        with tag('textarea', placeholder='Notes for campaign go here...', id='dmtextarea'):
-          text(raw_resp['notes'])
+        with tag('div', klass='row row-no-gutters'):
+          with tag('div', klass = 'col col-md-12'):
+            with tag('textarea', placeholder='Notes for campaign go here...', id='dmtextarea'):
+              text(raw_resp['notes'])
       with tag('div', klass = 'col dmmonster', id='hidden'):
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col-md-4'):
