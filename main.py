@@ -349,7 +349,7 @@ def create_account():
     newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
     return redirect('/static/login.html', code=302)
   except:
-    return redirect('/static/create.html', code=302)
+    return redirect('/static/taken.html', code=302)
 
 @app.route('/login', methods=['POST'])
 def login_account():
@@ -360,7 +360,7 @@ def login_account():
     session['u_token'] = user_token
     return redirect('/static/index.html', code=302)
   except:
-    return 'something went wrong'
+    return redirect('/static/invalid.html', code=302)
 
 def get_dm_sheet_form():
   doc, tag, text= Doc().tagtext()
