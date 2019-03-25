@@ -123,6 +123,9 @@ align_abbrev = {
 def roll_dice(size, mod, mod_v, adv, dis, uname):
   mod_val = modifier(mod_v)
   mod_msg = ('</br>' + '(modifier): ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
+  if size == 3:
+    return roll_3_d6(uname)
+
   r1 = random.randint(1, size)
   if (adv != dis):
     # if distinct values, means rolled 2 dice
@@ -139,6 +142,12 @@ def modifier(mod_value):
   mod_try = (int(mod_value)-10) // 2
   # don't return negative
   return mod_try if mod_try >= 0 else 0
+
+def roll_3_d6(uname):
+    r1= random.randint(1, 6)
+    r2= random.randint(1, 6)
+    r3= random.randint(1, 6)
+    return '(3x d6): ' + uname + ' rolled ' + str(r1) + ', ' + str(r2) + ', and ' + str(r3)
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
 def add_client(clients, room, uname):
