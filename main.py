@@ -149,7 +149,7 @@ def remove_client(uname, room):
     print('removing client') # DEBUG
     r_to_client[room].remove(to_rem)
   if not r_to_client[room]:
-    #print(f'room {room} is empty!') # DEBUG
+    print('room ' + room + ' is empty!') # DEBUG
     r_to_client.pop(room) # remove room
   if to_rem in last_client:
     last_client.remove(to_rem)  # client gone
@@ -289,7 +289,7 @@ def chat_socket(ws):
     msg = loads(message) # convert to dict
     # now process message dependent on type + room, clients
     if ws.handler.server.clients:
-      print(ws.handler.server.clients.keys());      # DEBUG
+      print(ws.handler.server.clients.keys())      # DEBUG
       clients = list(ws.handler.server.clients.values())
     room = session.get('room')
     resp = decide_request(msg, uname, isPlayer, clients, room)
