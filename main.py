@@ -149,7 +149,7 @@ def remove_client(uname, room):
     print('removing client') # DEBUG
     r_to_client[room].remove(to_rem)
   if not r_to_client[room]:
-    print(f'room {room} is empty!') # DEBUG
+    #print(f'room {room} is empty!') # DEBUG
     r_to_client.pop(room) # remove room
   if to_rem in last_client:
     last_client.remove(to_rem)  # client gone
@@ -175,12 +175,12 @@ def decide_request(req, uname, isPlayer, clients, room):
     # also need to update sheet for leaving user, key = UID + title, IF NOT EMPTY
     if req['msg']:
       title = req['msg']['sheet_title']
-      uid = uname
+      uid = session['u_token']
       if isPlayer:
         mongo.db['psheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
       else:
         mongo.db['dmsheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
-    print(f'{uname} is leaving')
+    #print(f'{uname} is leaving')
     remove_client(uname, room)
     resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
   elif req_type == 'get_sheet':
@@ -189,7 +189,7 @@ def decide_request(req, uname, isPlayer, clients, room):
     # can be either grabbing from db or forming based on raw JSON
     if 'title' in req.keys():
       # title indicates retrieving from db, use UID as key
-      uid = uname
+      uid = session['u_token']
       title = req['title']
       # find requested sheet in DB
       if isPlayer:
@@ -203,8 +203,7 @@ def decide_request(req, uname, isPlayer, clients, room):
     else:
       # raw JSON of sheet sent in message, store in db using UID as key
       raw_sheet = req['msg']
-      #raw_sheet['uid'] = session['u_token']
-      raw_sheet['uid'] = uname # TODO: CHANGE THIS TO THE SESSION
+      raw_sheet['uid'] = session['u_token'] # TODO: CHANGE THIS TO THE SESSION
       if isPlayer:
         mongo.db['psheets'].insert_one(raw_sheet)
       else:
@@ -261,7 +260,7 @@ def decide_request(req, uname, isPlayer, clients, room):
   elif req_type == 'load_sheets':
     # player asking for list of their sheets, get from DB
     #uid = session['u_token']
-    uid = uname # TODO: CHANGE THIS TO SESSION
+    uid = session['u_token']
     if isPlayer:
       all_sheets = dumps(mongo.db['psheets'].find({'uid': uid})) # store list of all sheets
     else:
