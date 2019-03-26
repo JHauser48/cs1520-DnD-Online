@@ -131,18 +131,6 @@ def roll_3_d6(uname):
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
 def add_client(clients, room, uname, ip, port):
-  '''
-  # take set difference of new list of clients and old
-  # difference should be one new client added
-  global last_client
-  global r_to_client
-  global u_to_client
-  print(uname)
-  new_client = list(set(clients) - set(last_client))
-  r_to_client[room].append(new_client[0]) # append first element in collection, new client
-  u_to_client[uname] = new_client[0]      # store Client for user
-  last_client = clients # save new client list
-  '''
   # use IP port tuple to identify client, find client with matching info, map for later messages
   if room not in r_to_client.keys():
     r_to_client[room] = []  # if empty, create new list
