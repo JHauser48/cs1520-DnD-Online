@@ -9,14 +9,18 @@ from flask_pymongo import PyMongo
 import dns
 from bson.json_util import loads, dumps
 
+with open('./creds/keys.txt') as f:
+  # open file with secret keys, read in vals with newline stripped
+  mongo_uri = f.readline().rstrip()
+  api_key = f.readline().rstrip()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'memeslol'
-app.config["MONGO_URI"] = "mongodb+srv://admin:1520isanepicclass%5F@dnd1520-zn4pg.gcp.mongodb.net/play?retryWrites=true"
+app.config['SECRET_KEY'] = 'doesntmatter'
+app.config["MONGO_URI"] = mongo_uri
 mongo = PyMongo(app)
 
 # firebase config (ONLY USED FOR AUTHENTICATION)
 config = {
-  "apiKey": "AIzaSyBwe2Fqvm4b39l654KUBwLfFf8wBSblLOM",
+  "apiKey": api_key,
   "authDomain": "dndonline.firebaseapp.com",
   "databaseURL": "https://dndonline.firebaseio.com",
   "storageBucket": "dndonline.appspot.com",
