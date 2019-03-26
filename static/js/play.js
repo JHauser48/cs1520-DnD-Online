@@ -2,6 +2,8 @@ var socket;
 var uname;
 var roomname;
 var isPlayer;
+var dice_data = [0, 0, 0, 0, 0, 0]; // d4, d6, d10, d12, d20
+
 console.log("before doc");
 $(document).ready(function(){
     console.log("doc loaded");
@@ -1350,8 +1352,33 @@ $(document).ready(function(){
       mod = $('#modifier').val();
       mod_val = mod != "none" ? raw_sheet['ability-scores'][mod] : 0;
       // create string from type appended with dice info
-      let msg = JSON.stringify({type: 'dice_roll', dice_type: $('#dice_list').val(), modifier: mod, modifier_value: mod_val, adv: adv, disadv: disadv});
+      let msg = JSON.stringify({type: 'dice_roll', dice_list: dice_data, modifier: mod, modifier_value: mod_val, adv: adv, disadv: disadv});
       socket.send(msg);
+      dice_data = [0, 0, 0, 0, 0, 0]
+    });
+
+    $('#d4').click(function(){
+        dice_data[0] += 1;
+    });
+
+    $('#d6').click(function(){
+       dice_data[1] += 1;
+    });
+
+    $('#d8').click(function(){
+        dice_data[2] += 1;
+    });
+
+    $('#d10').click(function(){
+        dice_data[3] += 1;
+    });
+
+    $('#d12').click(function(){
+        dice_data[4] += 1;
+    });
+
+    $('#d20').click(function(){
+        dice_data[5] += 1;
     });
 
     //handle if user submits attr change

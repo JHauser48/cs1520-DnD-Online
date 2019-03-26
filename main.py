@@ -9,14 +9,18 @@ from flask_pymongo import PyMongo
 import dns
 from bson.json_util import loads, dumps
 
+with open('./creds/keys.txt') as f:
+  # open file with secret keys, read in vals with newline stripped
+  mongo_uri = f.readline().rstrip()
+  api_key = f.readline().rstrip()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'memeslol'
-app.config["MONGO_URI"] = "mongodb+srv://admin:1520isanepicclass%5F@dnd1520-zn4pg.gcp.mongodb.net/play?retryWrites=true"
+app.config['SECRET_KEY'] = 'doesntmatter'
+app.config["MONGO_URI"] = mongo_uri
 mongo = PyMongo(app)
 
 # firebase config (ONLY USED FOR AUTHENTICATION)
 config = {
-  "apiKey": "AIzaSyBwe2Fqvm4b39l654KUBwLfFf8wBSblLOM",
+  "apiKey": api_key,
   "authDomain": "dndonline.firebaseapp.com",
   "databaseURL": "https://dndonline.firebaseio.com",
   "storageBucket": "dndonline.appspot.com",
@@ -93,35 +97,51 @@ align_abbrev = {
   'ce': 'Chaotic Evil'
 }
 
+dice_info = {
+  0: ('(d4): ', 4),
+  1: ('(d6): ', 6),
+  2: ('(d8): ', 8),
+  3: ('(d10): ', 10),
+  4: ('(d12): ', 12),
+  5: ('(d20): ', 20),
+}
 # helper to roll dice, takes dice type and adv/disadv attributes
-def roll_dice(size, mod, mod_v, adv, dis, uname):
+def roll_dice(dice_list, mod, mod_v, adv, dis, uname):
   mod_val = modifier(mod_v)
   mod_msg = ('</br>' + '(modifier): ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
-  if size == 3:
-    return roll_3_d6(uname)
+  print(dice_list)
 
-  r1 = random.randint(1, size)
+  rolls = roll_all(dice_list)
+  msg = uname + ' rolled: </br>'
+  msg += rolls[0]
+  print(rolls[0])
   if (adv != dis):
-    # if distinct values, means rolled 2 dice
-    r2 = random.randint(1, size)
-    msg = ('(d' + str(size) + '): ' + uname + ' rolled ' + str(r1) + ' and ' + str(r2) +
-    ' with ' + ('advantage' if adv else 'disadvantage') + ': use roll '
-    + (str(max(r1, r2)) if adv else str(min(r1, r2))) + mod_msg)
-  else:
-    # just 1 roll
-    msg = '(d' + str(size) + '): ' + uname + ' rolled a ' + str(r1) + mod_msg
+    #if distinct values, means rolled 2 dice
+    rolls2 = roll_all(dice_list)
+    msg += 'and ' + ('(with advantage)</br>' if adv else '(with disadvantage) </br>') + rolls2[0]
+    msg += 'Use the ' + ('FIRST ' if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else 'SECOND ')
+    msg += ' set of rolls'   
   return msg
+
+def roll_all(dice_list):
+  roll_i = 0
+  roll_sum = 0 
+  msg = ''
+  for roll_count in dice_list:
+    if roll_count > 0:
+      msg += dice_info[roll_i][0]  
+      for i in range(roll_count):
+        roll = random.randint(1, dice_info[roll_i][1])
+        roll_sum += roll
+        msg += str(roll) + (', ' if i != roll_count-1 else '</br>')
+    roll_i += 1
+  roll_data = [msg, roll_sum]
+  return roll_data
 
 def modifier(mod_value):
   mod_try = (int(mod_value)-10) // 2
   # don't return negative
   return mod_try if mod_try >= 0 else 0
-
-def roll_3_d6(uname):
-    r1= random.randint(1, 6)
-    r2= random.randint(1, 6)
-    r3= random.randint(1, 6)
-    return '(3x d6): ' + uname + ' rolled ' + str(r1) + ', ' + str(r2) + ', and ' + str(r3)
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
 def add_client(clients, room, uname):
@@ -168,7 +188,7 @@ def decide_request(req, uname, isPlayer, clients, room):
     resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
-    msg = roll_dice(int(req['dice_type']),req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname)
+    msg = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname)
     resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
@@ -321,7 +341,7 @@ def play():
     isPlayer = session.get('isPlayer')
     return render_template('play.html', room=room, name=name, isPlayer=isPlayer)
 
-#post to join room, store session data for user
+# post to join room, store session data for user
 # redirect them to play url
 @app.route('/joinRoom', methods=['POST'])
 def join_post():
