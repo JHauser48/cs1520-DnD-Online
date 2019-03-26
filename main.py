@@ -915,26 +915,37 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
           with tag('div', klass = 'col no-border col-md-8 dmmonsteredit'):
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col col-md-7', id = 'monstername'):
-                text('Monster Name')
+                text('Monster Name: ')
+                doc.asis('<input type="text" name="name" class="newMonsterTextField" placeholder="Monster Name" value="">');
               with tag('div', klass = 'col col-md-5', id = 'size'):
                 text('Size: ')
+                doc.asis('<input type="text" name="size" class="newMonsterTextField" placeholder="Size" value="">');
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col col-md-8', id = 'type'):
                 text('Type: ')
+                doc.asis('<input type="text" name="type" class="newMonsterTextField" placeholder="Monster Type" value="">')
               with tag('div', klass = 'col col-md-4', id = 'rating'):
                 text('Rating: ')
+                doc.asis('<input type="text" name="c_rating" class="newMonsterTextField" value="">')
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col col-md-4' , id='ac'):
                 text('AC: ')
+                doc.asis('<input type="text" name="ac" class="newMonsterTextField" placeholder="AC" value="">')
               with tag('div', klass = 'col col-md-4', id='health'):
                 text('Health: ')
+                doc.asis('<input type="text" name="hp" class="newMonsterTextField" placeholder="Avg. HP" value="">')
               with tag('div', klass = 'col col-md-4', id='hit_dice'):
                 text('Hit Dice: ')
+                doc.asis('<input type="text" name="hdnumber" class="newMonsterHD" value="">')
+                text('d')
+                doc.asis('<input type="text" name="hdvalue" class="newMonsterHD" value="">')
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col col-md-8', id = 'alignment'):
                 text('Alignment: ')
+                doc.asis('<input type="text" name="alignment" class="newMonsterTextField" placeholder="Alignment" value="">');
               with tag('div', klass = 'col col-md-4', id = 'speed'):
                 text('Speed: ')
+                doc.asis('<input type="text" name="speed" class="newMonsterTextField" placeholder="Speed" value="">')
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col'):
                 with tag('div', klass = 'row'):
@@ -949,58 +960,86 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-str'):
                         text('Str: ')
+                        doc.asis('<input type="text" name="str" class="newMonsterTextField" placeholder="Strength Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-str-mod'):
                         text('Mod: ')
+                        doc.asis('<input type="text" name="str-mod" class="newMonsterTextField" placeholder="Strength Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-dex'):
                         text('Dex: ')
+                        doc.asis('<input type="text" name="dex" class="newMonsterTextField" placeholder="Dexterity Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-dex-mod'):
                         text('Mod: ')
+                        doc.asis('<input type="text" name="dex-mod" class="newMonsterTextField" placeholder="Dexterity Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-const'):
                         text('Con: ')
+                        doc.asis('<input type="text" name="const" class="newMonsterTextField" placeholder="Constitution Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-const-mod'):
                         text('Mod: ')
+                        doc.asis('<input type="text" name="const-mod" class="newMonsterTextField" placeholder="Constitution Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-intell'):
                         text('Int: ')
+                        doc.asis('<input type="text" name="intell" class="newMonsterTextField" placeholder="Intelligence Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-intell-mod'):
                         text('Mod: ')
+                        doc.asis('<input type="text" name="intell-mod" class="newMonsterTextField" placeholder="Intelligence Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-wis'):
                         text('Wis: ')
+                        doc.asis('<input type="text" name="wis" class="newMonsterTextField" placeholder="Wisdom Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-wis-mod'):
                         text('Mod: ')
+                        doc.asis('<input type="text" name="wis-mod" class="newMonsterTextField" placeholder="Wisdom Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-char'):
                         text('Cha: ')
+                        doc.asis('<input type="text" name="char" class="newMonsterTextField" placeholder="Charisma Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-char-mod'):
                         text('Mod: ')
+                        doc.asis('<input type="text" name="char-mod" class="newMonsterTextField" placeholder="Charisma Modifier" value="" readonly>')
                   with tag('div', klass = 'col tswin', id = 'hidden'):
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-4', id='throws'):
                         with tag('div', klass = 'row'):
                           with tag('div', klass = 'col', id = 'throws-str'):
                             text('Str: ')
+                            doc.asis('<input type="text" name="throw-str" class="newMonsterTextField" value="">')
                         with tag('div', klass = 'row'):
                           with tag('div', klass = 'col', id = 'throws-dex'):
                             text('Dex: ')
+                            doc.asis('<input type="text" name="throw-dex" class="newMonsterTextField" value="">')
                         with tag('div', klass = 'row'):
                           with tag('div', klass = 'col', id = 'throws-const'):
                             text('Con: ')
+                            doc.asis('<input type="text" name="throw-const" class="newMonsterTextField" value="">')
                         with tag('div', klass = 'row'):
                           with tag('div', klass = 'col', id = 'throws-intell'):
                             text('Int: ')
+                            doc.asis('<input type="text" name="throw-intell" class="newMonsterTextField" value="">')
                         with tag('div', klass = 'row'):
                           with tag('div', klass = 'col', id = 'throws-wis'):
                             text('Wis: ')
+                            doc.asis('<input type="text" name="throw-wis" class="newMonsterTextField" value="">')
                         with tag('div', klass = 'row'):
                           with tag('div', klass = 'col', id = 'throws-char'):
                             text('Cha: ')
+                            doc.asis('<input type="text" name="throw-char" class="newMonsterTextField" value="">')
                       with tag('div', klass = 'col col-md-8', id='skills'):
-                        text('Skills:')
-
-
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col no-border', id='skillList'):
+                            text('Skills:')
+                        with tag('div', klass = 'row', id='newSkillRow'):
+                          with tag('div', klass = 'col col-md-6', id='skillName'):
+                            text('Name: ')
+                            doc.asis('<input type="text" name="newSkillName" class="newMonsterTextField" placeholder="Name" value="">')
+                          with tag('div', klass = 'col col-md-6', id='skillValue'):
+                            text('Value: ')
+                            doc.asis('<input type="text" name="newSkillValue" class="newMonsterTextField" placeholder="Value" value="">')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id='addSkill'):
+                            text('Add Skill')
         #senses languages and traits section
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col'):
@@ -1019,8 +1058,8 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                       with tag('div', klass = 'col', id='addSense'):
                         text('Add Sense')
                     with tag('div', klass = 'row'):
+                      text('Sense List:')
                       with tag('div', klass = 'col no-border', id = 'senseList'):
-                        text('Sense List:')
                         with tag('div', klass = 'row'):
                           with tag('div', klass = 'col col-md-6', id='senseName'):
                             text('Name: ')
