@@ -272,3 +272,27 @@ label {
     color: rgb(241, 241, 212);
     /*margin-left: -30px;*/
 }
+
+.btn-group button {
+  background-color: black; 
+  border: 3px solid red; 
+  color: rgb(241, 241, 212);; 
+  padding: 10px 24px; 
+  cursor: pointer; 
+  float: left;
+  margin-top: 5px;
+}
+
+.btn-group button:not(:last-child) {
+  border-right: none; /* Prevent double borders */
+}
+
+.btn-group:after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+.btn-group button:hover {
+  background-color: #3e8e41;
+}
