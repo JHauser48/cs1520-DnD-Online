@@ -1055,42 +1055,49 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                 with tag('div', klass = 'row row-no-gutters sltSec', style='display: none'):
                   with tag('div', klass = 'col senseswin', id = 'shown'):
                     with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id='senseList'):
+                        text('Senses:')
+                    with tag('div', klass = 'row', id='newSenseRow'):
+                      with tag('div', klass = 'col col-md-6', id='senseName'):
+                        text('Name: ')
+                        doc.asis('<input type="text" name="newSenseName" class="newMonsterTextField" placeholder="Name" value="">')
+                      with tag('div', klass = 'col col-md-6', id='senseValue'):
+                        text('Value: ')
+                        doc.asis('<input type="text" name="newSenseValue" class="newMonsterTextField" placeholder="Value" value="">')
+                    with tag('div', klass = 'row'):
                       with tag('div', klass = 'col', id='addSense'):
                         text('Add Sense')
-                    with tag('div', klass = 'row'):
-                      text('Sense List:')
-                      with tag('div', klass = 'col no-border', id = 'senseList'):
-                        with tag('div', klass = 'row'):
-                          with tag('div', klass = 'col col-md-6', id='senseName'):
-                            text('Name: ')
-                          with tag('div', klass = 'col col-md-6', id='senseValue'):
-                            text('Value: ')
                   with tag('div', klass = 'col langwin', id = 'hidden'):
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id='langList'):
+                        text('Languages:')
+                    with tag('div', klass = 'row', id='newLangRow'):
+                      with tag('div', klass = 'col col-md-8', id='langName'):
+                        text('Lang: ')
+                        doc.asis('<input type="text" name="newLangName" class="newMonsterTextField" placeholder="Name" value="">')
+                      with tag('div', klass = 'col col-md-2', id='langS'):
+                        text('S: ')
+                        doc.asis('<input type="text" name="newLangS" class="newMonsterTextField" placeholder="Y/N" value="">')
+                      with tag('div', klass = 'col col-md-2', id='langU'):
+                        text('U: ')
+                        doc.asis('<input type="text" name="newLangU" class="newMonsterTextField" placeholder="Y/N" value="">')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col', id='addLang'):
                         text('Add Language')
-                    with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col no-border', id = 'langList'):
-                        text('Language List:')
-                        with tag('div', klass = 'row'):
-                          with tag('div', klass = 'col col-md-6', id='langName'):
-                            text('Language: ')
-                          with tag('div', klass = 'col col-md-3', id='langSpeak'):
-                            text('Speak: ')
-                          with tag('div', klass = 'col col-md-3', id='langUnstd'):
-                            text('Undstnd: ')
                   with tag('div', klass = 'col traitwin', id = 'hidden'):
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id='traitList'):
+                        text('Traits:')
+                    with tag('div', klass = 'row', id='newSenseRow'):
+                      with tag('div', klass = 'col col-md-6', id='traitName'):
+                        text('Trait: ')
+                        doc.asis('<input type="text" name="newTraitName" class="newMonsterTextField" placeholder="Trait" value="">')
+                      with tag('div', klass = 'col col-md-6', id='traitDesc'):
+                        text('Desc: ')
+                        doc.asis('<textarea name="newTraitDesc" class="newMonsterTextArea" placeholder="Description of trait..."></textarea>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col', id='addTrait'):
                         text('Add Trait')
-                    with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col no-border', id = 'traitList'):
-                        text('Trait List:')
-                        with tag('div', klass = 'row'):
-                          with tag('div', klass = 'col col-md-5', id='traitName'):
-                            text('Trait: ')
-                          with tag('div', klass = 'col col-md-7', id='traitNote'):
-                            text('Description: ')
         #actions reactions and legendary actions
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col'):
