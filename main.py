@@ -24,7 +24,7 @@ config = {
   "authDomain": "dndonline.firebaseapp.com",
   "databaseURL": "https://dndonline.firebaseio.com",
   "storageBucket": "dndonline.appspot.com",
-  "serviceAccount": "./creds/dndonline-firebase-adminsdk-pjy9q-183230226d.json"
+  "serviceAccount": "./creds/dndonline-firebase-adminsdk-pjy9q-0f2dc0d576.json"
 }
 fb = pyrebase.initialize_app(config) # initialize firebase connection
 auth = fb.auth()
@@ -108,11 +108,12 @@ dice_info = {
 # helper to roll dice, takes dice type and adv/disadv attributes
 def roll_dice(dice_list, mod, mod_v, adv, dis, uname):
   mod_val = modifier(mod_v)
-  mod_msg = ('</br>' + '(modifier): ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
-  print(dice_list)
+  mod_msg = (' (modifier) ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
+  if sum(dice_list) == 0:
+    return "No rolls selected..."
 
   rolls = roll_all(dice_list)
-  msg = uname + ' rolled: </br>'
+  msg = uname + ' rolled:' + mod_msg + '</br>'
   msg += rolls[0]
   print(rolls[0])
   if (adv != dis):
