@@ -1519,9 +1519,7 @@ $(document).ready(function(){
 
     //helper to calculate modifier for stat
     function calc_mod(stat_val){
-      let mod_try = Math.floor((Number(stat_val)-10) / 2);
-      //don't return negative
-      return (mod_try >= 0) ? mod_try : 0;
+      return Math.floor((Number(stat_val)-10) / 2);
     }
 
     //helper to get JSON key based on where text added (could've used hash/dict I guess but whatever)
