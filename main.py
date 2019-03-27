@@ -25,7 +25,7 @@ config = {
   "authDomain": "dndonline.firebaseapp.com",
   "databaseURL": "https://dndonline.firebaseio.com",
   "storageBucket": "dndonline.appspot.com",
-  "serviceAccount": "./creds/dndonline-firebase-adminsdk-pjy9q-183230226d.json"
+  "serviceAccount": "./creds/dndonline-firebase-adminsdk-pjy9q-0f2dc0d576.json"
 }
 fb = pyrebase.initialize_app(config) # initialize firebase connection
 auth = fb.auth()
