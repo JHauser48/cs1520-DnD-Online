@@ -121,16 +121,16 @@ def roll_dice(dice_list, mod, mod_v, adv, dis, uname):
     rolls2 = roll_all(dice_list)
     msg += 'and ' + ('(with advantage)</br>' if adv else '(with disadvantage) </br>') + rolls2[0]
     msg += 'Use the ' + ('FIRST ' if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else 'SECOND ')
-    msg += ' set of rolls'   
+    msg += ' set of rolls'
   return msg
 
 def roll_all(dice_list):
   roll_i = 0
-  roll_sum = 0 
+  roll_sum = 0
   msg = ''
   for roll_count in dice_list:
     if roll_count > 0:
-      msg += dice_info[roll_i][0]  
+      msg += dice_info[roll_i][0]
       for i in range(roll_count):
         roll = random.randint(1, dice_info[roll_i][1])
         roll_sum += roll
@@ -1152,11 +1152,38 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     text('show')
                 with tag('div', klass = 'row row-no-gutters rivSec', style='display: none'):
                   with tag('div', klass = 'col resistwin', id = 'shown'):
-                    text('Resistances')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id='resistList'):
+                        text('Resistances:')
+                    with tag('div', klass = 'row', id='newResistRow'):
+                      with tag('div', klass = 'col col-md-12', id='resistName'):
+                        text('New Resistance: ')
+                        doc.asis('<input type="text" name="newResistName" class="newMonsterTextField" placeholder="Resistance" value="">')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col', id='addResist'):
+                        text('Add Resist')
                   with tag('div', klass = 'col immunewin', id = 'hidden'):
-                    text('Immunities')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id='immuneList'):
+                        text('Immunities:')
+                    with tag('div', klass = 'row', id='newImmuneRow'):
+                      with tag('div', klass = 'col col-md-12', id='immuneName'):
+                        text('New Immunity: ')
+                        doc.asis('<input type="text" name="newImmuneName" class="newMonsterTextField" placeholder="Immunity" value="">')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col', id='addImmune'):
+                        text('Add Immunity')
                   with tag('div', klass = 'col vulnerwin', id = 'hidden'):
-                    text('Vulnerabilities')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col no-border', id='vulnerList'):
+                        text('Vulnerabilities:')
+                    with tag('div', klass = 'row', id='newVulnerRow'):
+                      with tag('div', klass = 'col col-md-12', id='vulnerName'):
+                        text('New Vulnerability: ')
+                        doc.asis('<input type="text" name="newVulnerName" class="newMonsterTextField" placeholder="Vulnerability" value="">')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col', id='addVulner'):
+                        text('Add Vulnerability')
       #end dm edit
       with tag('div', klass = 'col dmencounter', id='hidden'):
         with tag('div', klass = 'col col-xs-4 col-sm-4 col-md-4 dmmonsterlist'):
