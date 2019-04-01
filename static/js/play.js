@@ -519,27 +519,30 @@ $(document).ready(function(){
           });
 
           //attaches a change event to all new monster text fields so we can tell when a monster needs to be Saved
-          //and when it gets saved
-          //this may need some modification so it gets set off when a sense, language, trait, or etc gets added
-          /* I am working on fixing this
-          var attachChangeEvent = function(){
-            $('.newMonsterTextField').change(function(){
-              monsterName = $('input[name=name]').val();
-              //console.log($('#div-' + monsterName + '-btn').html() + ' has changed');
-              $('#div-' + monsterName + '-btn').html(monsterName + '***');
-            });
-            $('.newMonsterTextArea').change(function(){
-              monsterName = $('input[name=name]').val();
-              //console.log($('#div-' + monsterName + '-btn').html() + ' has changed');
-              $('#div-' + monsterName + '-btn').html(monsterName + '***');
-            });
-            $('.newMonsterHD').change(function(){
-              monsterName = $('input[name=name]').val();
-              //console.log($('#div-' + monsterName + '-btn').html() + ' has changed');
-              $('#div-' + monsterName + '-btn').html(monsterName + '***');
+          var addInputChangeEvent = function(){//}
+            $('input:not([name^="new"])').change(()=>{
+              $('#div-' + $('input[name=name]').val() + '-btn').css('color', 'red');
             });
           }
-          */
+
+          //ability score change event listener
+          //automatically updates the ability scores' mod value
+          //this doesn't work cause of adding the same listener multiple times
+          //$('[id^="ability-scores-"]').filter(':even').each(()=>{$(this).find('input').change(()=>{
+          //    $('input[name=' + $(this).attr('name') + '-mod]').val(getASModifier($(this).val()));
+          //});});
+
+          //if one of the add buttons is clicked then also say we need to save the monster
+          $('div[id^="add"]').click(()=>{
+            $('#div-' + $('input[name=name]').val() + '-btn').css('color', 'red');
+          });
+
+          //ability score change event listener
+          //automatically updates the ability scores' mod value
+          //this doesn't work cause of adding the same listener multiple times
+          $('[id^="ability-scores-"]').filter(':even').each(()=>{$(this).find('input').change(()=>{
+              $('input[name=' + $(this).attr('name') + '-mod]').val(getASModifier($(this).val()));
+          });});
 
           //calculates the modifier for a given ability scores
           //this is probably a duplicate function but oh well
@@ -652,6 +655,49 @@ $(document).ready(function(){
                                 </div>`);
               $('#traitList').append(traitRow);
             }
+
+            //load in Resistances
+            $('#resistList').empty();//clear resist list
+            $('#resistList').html('Resistances:');
+            for(resist in currentMonsterEdit.resistances){
+              if(currentMonsterEdit.resistances[resist] == '') break;
+              //construct HTML
+              var resistRow = $(`<div class="row">
+                                  <div class="col col-md-12">
+                                    <input type="text" class="newMonsterTextField" name="resistName" value="` + currentMonsterEdit.resistances[resist] + `">
+                                  </div>
+                                </div>`);
+              $('#resistList').append(resistRow);
+            }
+
+            //load in Immunities
+            $('#immuneList').empty();//clear resist list
+            $('#immuneList').html('Immunities:');
+            for(immune in currentMonsterEdit.immunities){
+              if(currentMonsterEdit.immunities[immune] == '') break;
+              //construct HTML
+              var immuneRow = $(`<div class="row">
+                                  <div class="col col-md-12">
+                                    <input type="text" class="newMonsterTextField" name="immuneName" value="` + currentMonsterEdit.immunities[immune] + `">
+                                  </div>
+                                </div>`);
+              $('#immuneList').append(immuneRow);
+            }
+
+            //load in vulnerabilities
+            $('#vulnerList').empty();//clear resist list
+            $('#vulnerList').html('Vulnerabilities:');
+            for(vulner in currentMonsterEdit.vulnerabilities){
+              if(currentMonsterEdit.vulnerabilities[vulner] == '') break;
+              //construct HTML
+              var vulnerRow = $(`<div class="row">
+                                  <div class="col col-md-12">
+                                    <input type="text" class="newMonsterTextField" name="vulnerName" value="` + currentMonsterEdit.vulnerabilities[vulner] + `">
+                                  </div>
+                                </div>`);
+              $('#vulnerList').append(vulnerRow);
+            }
+            addInputChangeEvent();
           }
           //loads a new monster by default
           loadMonsterEdit('');
@@ -675,6 +721,7 @@ $(document).ready(function(){
             //clear the new skill row
             $('input[name=newSkillName]').val('');
             $('input[name=newSkillValue]').val('');
+            addInputChangeEvent();
           });
 
           $('#addSense').click(function(){
@@ -695,6 +742,7 @@ $(document).ready(function(){
             //clear the new sense row
             $('input[name=newSenseName]').val('');
             $('input[name=newSenseValue]').val('');
+            addInputChangeEvent();
           });
 
           $('#addLang').click(function(){
@@ -720,6 +768,7 @@ $(document).ready(function(){
             $('input[name=newLangName]').val('');
             $('input[name=newLangS]').val('');
             $('input[name=newLangU]').val('');
+            addInputChangeEvent();
           });
 
           $('#addTrait').click(function(){
@@ -740,6 +789,55 @@ $(document).ready(function(){
             //clear the new skill row
             $('input[name=newTraitName]').val('');
             $('textarea[name=newTraitDesc]').val('');
+            addInputChangeEvent();
+          });
+
+          $('#addResist').click(function(){
+            rName = $('input[name=newResistName]').val();
+            if(rName == '') return;
+            currentMonsterEdit.resistances.push(rName);
+            //construct html
+            var resistRow = $(`<div class="row">
+                                <div class="col col-md-12">
+                                  <input type="text" class="newMonsterTextField" name="resistName" value="` + rName + `">
+                                </div>
+                              </div>`);
+            $('#resistList').append(resistRow);
+            //clear new resistance row
+            $('input[name=newResistName]').val('');
+            addInputChangeEvent();
+          });
+
+          $('#addImmune').click(function(){
+            iName = $('input[name=newImmuneName]').val();
+            if(iName == '') return;
+            currentMonsterEdit.immunities.push(iName);
+            //construct html
+            var immuneRow = $(`<div class="row">
+                                <div class="col col-md-12">
+                                  <input type="text" class="newMonsterTextField" name="immuneName" value="` + iName + `">
+                                </div>
+                              </div>`);
+            $('#immuneList').append(immuneRow);
+            //clear new resistance row
+            $('input[name=newImmuneName]').val('');
+            addInputChangeEvent();
+          });
+
+          $('#addVulner').click(function(){
+            vName = $('input[name=newVulnerName]').val();
+            if(vName == '') return;
+            currentMonsterEdit.vulnerabilities.push(vName);
+            //construct html
+            var vulnerRow = $(`<div class="row">
+                                <div class="col col-md-12">
+                                  <input type="text" class="newMonsterTextField" name="vulnerName" value="` + vName + `">
+                                </div>
+                              </div>`);
+            $('#vulnerList').append(vulnerRow);
+            //clear new resistance row
+            $('input[name=newVulnerName]').val('');
+            addInputChangeEvent();
           });
 
           $('#addmonsterbtn').click(function(){
@@ -750,6 +848,8 @@ $(document).ready(function(){
               $('#monstername').css('color', 'red');
               return;
             }else{
+              //set button css to default
+              $('#div-' + monsterName + '-btn').css('color', '');
               $('#monstername').css('color', '');
             }
 
@@ -786,10 +886,31 @@ $(document).ready(function(){
                   });
                   break;
                 case 'resistances':
+                  //clear resist Array
+                  monsterToSave[attr].splice(0, monsterToSave[attr].length);
+                  //iterate over all of the children that are div elements
+                  $('#resistList').children('div').each(function(){
+                    var rName = $(this).find('input[name=resistName]').val();
+                    monsterToSave[attr].push(rName);
+                  });
                   break;
                 case 'vulnerabilities':
+                  //clear vulnerabilities Array
+                  monsterToSave[attr].splice(0, monsterToSave[attr].length);
+                  //iterate over all of the children that are div elements
+                  $('#vulnerList').children('div').each(function(){
+                    var vName = $(this).find('input[name=vulnerName]').val();
+                    monsterToSave[attr].push(vName);
+                  });
                   break;
                 case 'immunities':
+                  //clear immunities Array
+                  monsterToSave[attr].splice(0, monsterToSave[attr].length);
+                  //iterate over all of the children that are div elements
+                  $('#immuneList').children('div').each(function(){
+                    var iName = $(this).find('input[name=immuneName]').val();
+                    monsterToSave[attr].push(iName);
+                  });
                   break;
                 case 'senses':
                   //clear senses array
@@ -842,13 +963,6 @@ $(document).ready(function(){
               var newdiv = $('<div class=\'col\' id=\'div-'+monsterName+'-btn\'>' + monsterName + '</div>');
               newdiv.click(()=>{loadMonsterEdit(monsterName);});
               $('#mmonsterlist').append(newdiv);
-            }else{
-              //var str = $('#div-' + monsterName + '-btn').html();
-              //if(str.slice(-1) === '*'){
-              //  str = str.slice(0, -3);
-              //  console.log(str);
-              //  $('#div-' + monsterName + '-btn').html(str);
-              //}
             }
             //add new monster to the raw json
             raw_sheet['monsters'][monsterName] = monsterToSave;
@@ -1350,7 +1464,17 @@ $(document).ready(function(){
       adv = $('#adv:checked').val() == "on" ? 1 : 0;
       disadv = $('#disadv:checked').val() == "on" ? 1 : 0;
       mod = $('#modifier').val();
-      mod_val = mod != "none" ? raw_sheet['ability-scores'][mod] : 0;
+      console.log(raw_sheet);
+      if(raw_sheet == null || mod == "none"){
+          mod_val = 0;
+      }else{
+          if(raw_sheet.hasOwnProperty('ability-scores')){
+            mod_val = raw_sheet['ability-scores'][mod];
+          }else{
+            mod_val = 0;
+          }
+      }
+     // mod_val = mod != "none" ? raw_sheet['ability-scores'][mod] : 0;
       // create string from type appended with dice info
       let msg = JSON.stringify({type: 'dice_roll', dice_list: dice_data, modifier: mod, modifier_value: mod_val, adv: adv, disadv: disadv});
       socket.send(msg);
@@ -1519,9 +1643,7 @@ $(document).ready(function(){
 
     //helper to calculate modifier for stat
     function calc_mod(stat_val){
-      let mod_try = Math.floor((Number(stat_val)-10) / 2);
-      //don't return negative
-      return (mod_try >= 0) ? mod_try : 0;
+      return Math.floor((Number(stat_val)-10) / 2);
     }
 
     //helper to get JSON key based on where text added (could've used hash/dict I guess but whatever)
@@ -1574,5 +1696,5 @@ $(document).ready(function(){
       socket.send(msg);
       socket.close();
     });
-
+    //DONT PUT ANYTHING PAS THISg ,roloc-dnuorg    });
 });
