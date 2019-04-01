@@ -1,8 +1,8 @@
-#btn1{
+.btn{
   background-color: #000000;
   border: 3px solid;
   color: #FF0000;
-  padding: 12px 80px;
+  
   text-decoration: none;
   margin: 10px;
   cursor: pointer;
@@ -13,19 +13,20 @@
   border-color: red;
 }
 
+#btn1{
+  padding: 12px 80px;
+}
+
 #btn2{
-  background-color: #000000;
-  border: 3px solid;
-  color: #FF0000;
-  padding: 14px 70px;
-  text-decoration: none;
-  margin: 10px;
-  cursor: pointer;
-  margin-right: 100%;
-  margin-left: 20px;
-  font-size: 20px;
-  border-radius: 12px;
-  border-color: red;
+  padding: 12px 69px;
+}
+
+#btn3{
+  padding: 12px 71px;
+}
+
+#btn4{
+  padding: 12px 82px;
 }
 
 #bodybackgound{
@@ -44,12 +45,15 @@
   margin-bottom: 15px;
 }
 
+#forgetEmail{
+  width: 260px
+}
+
 .container{
-  /* background-color: #6D030B; */
   height: 500px;
   width: 300px;
   margin-left: 40%;
-  margin-top: 8%;
+  margin-top: 7%;
   /* border: 1px rgb(19, 17, 17) solid; */
   padding: 20px;
   font-size: 20px;

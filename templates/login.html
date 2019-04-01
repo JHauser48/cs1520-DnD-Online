@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
   <head>
+    <script>
+		function isHidden(oDiv){
+      	    var vDiv = document.getElementById(oDiv);
+          	vDiv.style.display = (vDiv.style.display == 'none')?'block':'none';
+    	}
+	</script>
+
     <meta charset="utf-8">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
     integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -18,12 +25,20 @@
       <form class="form-inline" action="/login" method="POST">
         <img src="./../static/assets/image2.png" alt="logo">
         <p class="subtitle">E-mail: </p>
-        <input class="field" id="email" type="text" placeholder="User Name" name="email" required>
+        <input class="field" id="email" type="text" placeholder="Email" name="email" required>
         <p class="subtitle">Password: </p>
         <input class="field" id="password" type="password" placeholder="Password" name="password" required>
-        <button id="btn1">Login</button>
+        <button class="btn" id="btn1" value="login">Login</button>
       </form>
-      <button onclick="window.location.href = './create.html';" id="btn2">Register</button>
+      <button class="btn" id="btn2" onclick="location.href='./../static/create.html'">Register</button>
+      <div class = "forget">
+        <button class="btn" onclick="isHidden('forgetForm')" class="btn" id="btn3">Forget?</button>
+        <form id="forgetForm" action="/login" method="POST" style="display:none">
+            <input class="field" id="forgetEmail" type="text" placeholder="Email" name="forgetEmail" required>
+           <button class="btn" id="btn4" value="sendEmail">Send Email</button>
+        </form>
+      </div> 
     </div>
-  </body>
+  </body>     
 </html>
+ 
