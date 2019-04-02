@@ -349,8 +349,6 @@ def join_post():
   # store session info for use
   session['name'] = request.form['uname']
   session['room'] = request.form['rname']
-  print(request.environ.get('HTTP_X_REAL_IP', request.remote_addr))     # DEBUG
-  print(request.environ.get('REMOTE_PORT')) # DEBUG
   session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
   return redirect(url_for('.play'), code=302)
 
@@ -377,7 +375,6 @@ def login_account():
   try:
     user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
     user_token = user_acc['idToken']
-    print(user_token)
     session['u_token'] = str(request.form['email'])
     return redirect('/static/index.html', code=302)
   except:
