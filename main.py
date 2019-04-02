@@ -332,7 +332,7 @@ def chat_socket(ws):
 
 @app.route('/')
 def root():
-    return redirect("/static/login.html", code=302)
+    return render_template('login.html')
 
 @app.route('/play')
 def play():
@@ -366,7 +366,7 @@ def create_account():
     user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
     auth.send_email_verification(user['idToken'])
     newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
-    return redirect('/static/login.html', code=302)
+    return redirect('/templates/login.html', code=302)
   except:
     return redirect('/static/taken.html', code=302)
 
@@ -376,9 +376,9 @@ def login_account():
     user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
     user_token = user_acc['idToken']
     session['u_token'] = str(request.form['email'])
-    return redirect('/static/index.html', code=302)
+    return render_template('/static/index.html')
   except:
-    return redirect('/static/invalid.html', code=302)
+    return render_template('/static/invalid.html')
 
 def get_dm_sheet_form():
   doc, tag, text= Doc().tagtext()
