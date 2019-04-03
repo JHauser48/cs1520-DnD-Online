@@ -379,9 +379,9 @@ def login_account():
     user_token = user_acc['idToken']
     print(user_token)
     session['u_token'] = str(request.form['email'])
-    return render_template('/static/index.html')
+    return redirect('/static/index.html', code=302)
   except:
-    return render_template('/static/invalid.html')
+    return redirect('/static/invalid.html', code=302)
 
 def get_dm_sheet_form():
   doc, tag, text= Doc().tagtext()
