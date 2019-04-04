@@ -8,6 +8,7 @@ import pyrebase
 from flask_pymongo import PyMongo
 import dns
 from bson.json_util import loads, dumps
+import threading
 
 with open('./creds/keys.txt') as f:
   # open file with secret keys, read in vals with newline stripped
@@ -32,7 +33,6 @@ auth = fb.auth()
 sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
-last_client = []            # use to store previous clients list, compare to track clients
 single_events = ['get_sheet', 'get_blank', 'load_sheets'] # track events where should only be sent to sender of event, i.e. not broadcast
 user_acc = ''
 user_token = ''
@@ -145,23 +145,24 @@ def modifier(mod_value):
   return mod_try if mod_try >= 0 else 0
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
-def add_client(clients, room, uname):
-  # take set difference of new list of clients and old
-  # difference should be one new client added
-  global last_client
-  global r_to_client
-  global u_to_client
-  new_client = list(set(clients) - set(last_client))
+def add_client(clients, room, uname, ip, port):
+  # use IP port tuple to identify client, find client with matching info, map for later messages
   if room not in r_to_client.keys():
     r_to_client[room] = []  # if empty, create new list
-  r_to_client[room].append(new_client[0]) # append first element in collection, new client
-  u_to_client[uname] = new_client[0]      # store Client for user
-  last_client = clients # save new client list
+  client_tuple = (str(ip), int(port))
+  print(list(clients.keys())) # DEBUG
+  print(client_tuple)   # DEBUG
+  for ip_tuple in list(clients.keys()):
+    if ip_tuple == client_tuple:
+      print('found client!')
+      found_client = clients[ip_tuple]
+      u_to_client[uname] = found_client
+      r_to_client[room].append(found_client)
+      break
 
 # helper from when client leaves room, remove Client entry for uname and from room list
 # update client list
 def remove_client(uname, room):
-  global last_client
   global r_to_client
   global u_to_client
   to_rem = u_to_client.pop(uname) # remove leaving client's entry and get val
@@ -172,17 +173,15 @@ def remove_client(uname, room):
   if not r_to_client[room]:
     print('room ' + room + ' is empty!') # DEBUG
     r_to_client.pop(room) # remove room
-  if to_rem in last_client:
-    last_client.remove(to_rem)  # client gone
 
 # helper to determine what type of request based on header, form response
-def decide_request(req, uname, isPlayer, clients, room):
+def decide_request(req, uname, isPlayer, clients, room, ip, port):
   resp = ""
   req_type = req['type']
   if req_type == 'enter':
     # person has joined room, must take difference of new clients list and old
     # use to track person in room
-    add_client(clients, room, uname)
+    add_client(clients, room, uname, ip, port)
     resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status'}
   elif req_type == 'text':
     # someone is sending a message
@@ -305,15 +304,14 @@ def chat_socket(ws):
     # store name of sender
     uname = session.get('name')
     isPlayer = session.get('isPlayer')
-    global r_to_client
-    global u_to_client
+    client_ip = request.environ['REMOTE_ADDR'] # store IP of client
+    client_port = request.environ['REMOTE_PORT'] # store port of client
     msg = loads(message) # convert to dict
     # now process message dependent on type + room, clients
     if ws.handler.server.clients:
-      print(ws.handler.server.clients.keys())      # DEBUG
-      clients = list(ws.handler.server.clients.values())
+      clients = ws.handler.server.clients
     room = session.get('room')
-    resp = decide_request(msg, uname, isPlayer, clients, room)
+    resp = decide_request(msg, uname, isPlayer, clients, room, client_ip, client_port)
     # check if broadcast or single event
     broadcast = True if msg['type'] not in single_events else False
     # send response to every one in sender's room if broadcast
@@ -374,11 +372,10 @@ def create_account():
 def login_account():
   try:
     user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
-    user_token = user_acc['idToken']
     session['u_token'] = str(request.form['email'])
-    return render_template('/static/index.html')
+    return redirect('/static/index.html', code=302)
   except:
-    return render_template('/static/invalid.html')
+    return redirect('/static/invalid.html', code=302)
 
 def get_dm_sheet_form():
   doc, tag, text= Doc().tagtext()
