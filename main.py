@@ -8,6 +8,7 @@ import pyrebase
 from flask_pymongo import PyMongo
 import dns
 from bson.json_util import loads, dumps
+import threading
 
 with open('./creds/keys.txt') as f:
   # open file with secret keys, read in vals with newline stripped
@@ -36,6 +37,7 @@ last_client = []            # use to store previous clients list, compare to tra
 single_events = ['get_sheet', 'get_blank', 'load_sheets'] # track events where should only be sent to sender of event, i.e. not broadcast
 user_acc = ''
 user_token = ''
+sock_lock = threading.Lock() # spinlock for ensuring clients list updated one at a time, avoid race condition
 
 # map level to amount of XP needed
 level_to_xp = {
@@ -145,18 +147,20 @@ def modifier(mod_value):
   return mod_try if mod_try >= 0 else 0
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
-def add_client(clients, room, uname):
-  # take set difference of new list of clients and old
-  # difference should be one new client added
-  global last_client
-  global r_to_client
-  global u_to_client
-  new_client = list(set(clients) - set(last_client))
+def add_client(clients, room, uname, ip, port):
+  # use IP port tuple to identify client, find client with matching info, map for later messages
   if room not in r_to_client.keys():
     r_to_client[room] = []  # if empty, create new list
-  r_to_client[room].append(new_client[0]) # append first element in collection, new client
-  u_to_client[uname] = new_client[0]      # store Client for user
-  last_client = clients # save new client list
+  client_tuple = (str(ip), int(port))
+  print(list(clients.keys())) # DEBUG
+  print(client_tuple)   # DEBUG
+  for ip_tuple in list(clients.keys()):
+    if ip_tuple == client_tuple:
+      print('found client!')
+      found_client = clients[ip_tuple]
+      u_to_client[uname] = found_client
+      r_to_client[room].append(found_client)
+      break
 
 # helper from when client leaves room, remove Client entry for uname and from room list
 # update client list
@@ -176,13 +180,13 @@ def remove_client(uname, room):
     last_client.remove(to_rem)  # client gone
 
 # helper to determine what type of request based on header, form response
-def decide_request(req, uname, isPlayer, clients, room):
+def decide_request(req, uname, isPlayer, clients, room, ip, port):
   resp = ""
   req_type = req['type']
   if req_type == 'enter':
     # person has joined room, must take difference of new clients list and old
     # use to track person in room
-    add_client(clients, room, uname)
+    add_client(clients, room, uname, ip, port)
     resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status'}
   elif req_type == 'text':
     # someone is sending a message
@@ -305,15 +309,16 @@ def chat_socket(ws):
     # store name of sender
     uname = session.get('name')
     isPlayer = session.get('isPlayer')
+    client_ip = request.environ['REMOTE_ADDR'] # store IP of client
+    client_port = request.environ['REMOTE_PORT'] # store port of client
     global r_to_client
     global u_to_client
     msg = loads(message) # convert to dict
     # now process message dependent on type + room, clients
     if ws.handler.server.clients:
-      print(ws.handler.server.clients.keys())      # DEBUG
-      clients = list(ws.handler.server.clients.values())
+      clients = ws.handler.server.clients
     room = session.get('room')
-    resp = decide_request(msg, uname, isPlayer, clients, room)
+    resp = decide_request(msg, uname, isPlayer, clients, room, client_ip, client_port)
     # check if broadcast or single event
     broadcast = True if msg['type'] not in single_events else False
     # send response to every one in sender's room if broadcast
@@ -329,6 +334,12 @@ def chat_socket(ws):
       print(resp)
       curr.ws.send(resp)
 
+@app.route('/check_socket')
+def check_socket():
+  global sock_lock
+  sock_lock.acquire()   # block until can acquire lock
+  print(f"{session.get('name')} acquired the lock") # DEBUG
+  return jsonify({'msg': 'Success!'})
 
 @app.route('/')
 def root():
@@ -349,8 +360,6 @@ def join_post():
   # store session info for use
   session['name'] = request.form['uname']
   session['room'] = request.form['rname']
-  print(request.environ.get('HTTP_X_REAL_IP', request.remote_addr))     # DEBUG
-  print(request.environ.get('REMOTE_PORT')) # DEBUG
   session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
   return redirect(url_for('.play'), code=302)
 
@@ -376,8 +385,6 @@ def create_account():
 def login_account():
   try:
     user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
-    user_token = user_acc['idToken']
-    print(user_token)
     session['u_token'] = str(request.form['email'])
     return redirect('/static/index.html', code=302)
   except:
