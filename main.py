@@ -457,7 +457,7 @@ def create_account():
     user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
     auth.send_email_verification(user['idToken'])
     newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
-    return redirect('/templates/login.html', code=302)
+    return redirect('/', code=302)
   except:
     return redirect('/static/taken.html', code=302)
 
