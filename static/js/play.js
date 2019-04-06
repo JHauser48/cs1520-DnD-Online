@@ -23,6 +23,11 @@ $(document).ready(function(){
     var cond_list = ['Normal', 'Blinded', 'Charmed', 'Deafened', 'Fatigued', 'Frightened', 'Grappled',
     'Incapacitated', 'Invisible', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained',
     'Stunned', 'Unconscious'];  //list of all possible conditions, use for list
+    var box_to_but = {'pinfo': 'show_info', 'pstats': 'show_stats', 'pws': 'show_ws', 
+    'pitems': 'show_items'}; 
+    //all possible boxes to buts, use for tabs
+    var but_to_box = {'show_info': 'pinfo', 'show_stats': 'pstats', 'show_ws': 'pws', 
+    'show_items': 'pitems'};      //map buttons to corresponding boxes
 
     //DM variables
     var newMonsterEdit = { //new monster info that gets input into the html
@@ -83,30 +88,31 @@ $(document).ready(function(){
           }
 
           // --- BEGIN HANDLERS FOR PSHEET ELEMENTS ---
-          //handle if user clicks spells, need to switch to spell view
-          $('#show_spell').click(function() {
-            // set weapons to hidden, spells to shown, change "click" text to other
-            // IF Not already shown
-            if ($('.pspells').attr('id') == 'hidden') {
-              $('.pweps').attr('id', 'hidden');
-              $('.pspells').attr('id', 'shown');
-              $('#show_wep').append(' (click to view)');
-              let curr_html = $('#show_spell').html();
-              curr_html = curr_html.replace(' (click to view)', '');
-              $('#show_spell').html(curr_html);
+          
+          //handle player wanting to switch tabs of psheet
+          $('.showbox').click(function() {
+            //set clicked to shown (if not already) and all others to hidden
+            let but_id = this.id;      //which was clicked
+            let box_id = but_to_box[but_id];   //get one to show
+            // go thru and hide all other if not hidden
+            for (let box of Object.keys(box_to_but)) {
+              if (box === box_id) {
+                continue; //one to show, don't hide
+              }
+              if ($('.' + box).attr('id') == 'shown') {
+                //hide all other shown, mark as (click to view)
+                $('.' + box).attr('id', 'hidden');
+                let curr_but = box_to_but[box];
+                $('#' + curr_but).append(' (click to view)');
+              }
             }
-          });
-          //handle if user clicks weps, need to switch to wep view
-          $('#show_wep').click(function() {
-            // set weapons to hidden, spells to shown, change "click" text to other
-            // IF not already shown
-            if ($('.pweps').attr('id') == 'hidden') {
-              $('.pspells').attr('id', 'hidden');
-              $('.pweps').attr('id', 'shown');
-              $('#show_spell').append(' (click to view)');
-              let curr_html = $('#show_wep').html();
+            if ($('.' + box_id).attr('id') == 'hidden') {
+              //if not already shown, show the clicked box
+              $('.' + box_id).attr('id', 'shown');
+              let curr_html = $('#' + but_id).html();
+              // active window, remove (click to view)
               curr_html = curr_html.replace(' (click to view)', '');
-              $('#show_wep').html(curr_html);
+              $('#' + but_id).html(curr_html);
             }
           });
 
@@ -318,7 +324,15 @@ $(document).ready(function(){
             `<button class="btn choose_sheet" id="${save_sheet.sheet_title}">Choose</button>`+
             `</div></div>`;
           });
+          all_sheets += '<div class="row"><div class="col title"><button class="btn but_sheet title" id = "create_sheet">' +
+          'Create New DM Sheet</button></div></div>'; //add create sheet in case change mind
           sheet.html(all_sheets);       //display saved sheets for picking
+          //handle if user wants to create a new psheet, get HTML of form from server
+          $('#create_sheet').click(function() {
+            //ask for blank html to fill out
+            let msg = JSON.stringify({type: 'get_blank'});
+            socket.send(msg);
+          });
           //register handler for user choosing a sheet
           $('.btn.choose_sheet').click(function() {
             let chosen_sheet = this.id;       //sheet title == id of button
@@ -1666,6 +1680,13 @@ $(document).ready(function(){
       return key;
     }
 
+    //if user hovers over roll button
+    $('.btn-group button').hover(function() {
+      $(this).css("background-color", "green");
+    }, function() {
+      $(this).css("background-color", "black");
+    });
+
     //handle if user wants to create a new psheet, get HTML of form from server
     $('#create_sheet').click(function() {
       //ask for blank html to fill out
@@ -1686,7 +1707,8 @@ $(document).ready(function(){
       let msg = JSON.stringify({type: 'leave', msg: raw_sheet});
       socket.send(msg);
       socket.close();
-      window.location.href = "/static/index.html";
+      //go back to index
+      window.location.href = '/login';
     });
 
     //handle if user exits page, make sure they leave the room

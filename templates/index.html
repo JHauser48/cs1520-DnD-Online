@@ -10,20 +10,23 @@
         crossorigin="anonymous"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.0/js/bootstrap.min.js" integrity="sha384-7aThvCh9TypR7fIc2HV4O/nFMVCBwyIUKL8XCtKE+8xgCgl/PQGuFsvShjr74PBp"
         crossorigin="anonymous"></script>
-        <link rel="stylesheet" type="text/css" href="./css/style.css">
-        <script src="./js/script.js"></script>
+        <link rel="stylesheet" type="text/css" href="/static/css/style.css">
+        <script src="/static/js/script.js"></script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <title>Dungeons and Dragons: not yet Online!</title>
+        <title>Dungeons and Dragons: Online!</title>
     </head>
-    <body background="./assets/dragon3.png">
+    <body background="/static/assets/dragon3.png">
       <div class="topnavbar">
         <a href="https://www.dandwiki.com/wiki/" target="_blank">Rules</a>
-        <a href="./login.html">SignOut</a>
-        <img src="./assets/logo.png" width="70px" height="50px">
+        <a href="/templates/login.html">SignOut</a>
+        <img src="/static/assets/logo.png" width="70px" height="50px">
       </div>
       <div class="container">
-		<img src="./assets/image2.png" alt="logo">
+    <img src="/static/assets/image2.png" alt="logo">
+    {% if badDm %}
+      <script>alert('Selected room already has a DM!')</script>
+    {% endif %}
         <form class="form-inline" action="/joinRoom" method="POST">
           <input class="field" id="user" type="text" placeholder="User Name" name="uname" required>
           <input class="field" id="roomname" type="text" placeholder="Room Name" name="rname" required>

@@ -84,3 +84,10 @@ div.topnavbar{
   div.topnavbar img{
       padding-left: 20px;
   }
+
+  .error{
+    color: red;
+    background-color: black;
+    font-size: 16px;
+    font-weight: bolder;
+}

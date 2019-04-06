@@ -8,7 +8,6 @@ import pyrebase
 from flask_pymongo import PyMongo
 import dns
 from bson.json_util import loads, dumps
-import threading
 
 with open('./creds/keys.txt') as f:
   # open file with secret keys, read in vals with newline stripped
@@ -33,6 +32,8 @@ auth = fb.auth()
 sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
+r_to_dm = {}     # maps room to boolean marking True if room already has DM, false if no DM
+r_u_char = {}    # for each room, maps username to character name 
 single_events = ['get_sheet', 'get_blank', 'load_sheets'] # track events where should only be sent to sender of event, i.e. not broadcast
 user_acc = ''
 user_token = ''
@@ -106,14 +107,19 @@ dice_info = {
   5: ('(d20): ', 20),
 }
 # helper to roll dice, takes dice type and adv/disadv attributes
-def roll_dice(dice_list, mod, mod_v, adv, dis, uname):
+def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room):
   mod_val = modifier(mod_v)
   mod_msg = (' (modifier) ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
   if sum(dice_list) == 0:
     return "No rolls selected..."
 
   rolls = roll_all(dice_list)
-  msg = uname + ' rolled:' + mod_msg + '</br>'
+  if room in r_u_char.keys() and uname in r_u_char[room].keys():
+    # display alias if character has taken name 
+    alias = r_u_char[room][uname]
+    msg = alias + ' (' + uname + ') rolled:' + mod_msg + '</br>'
+  else:
+    msg = uname + ' rolled:' + mod_msg + '</br>'
   msg += rolls[0]
   print(rolls[0])
   if (adv != dis):
@@ -141,8 +147,7 @@ def roll_all(dice_list):
 
 def modifier(mod_value):
   mod_try = (int(mod_value)-10) // 2
-  # don't return negative
-  return mod_try if mod_try >= 0 else 0
+  return mod_try
 
 # helper for when new client enters room, store new Client object, map uname to Client object for removal
 def add_client(clients, room, uname, ip, port):
@@ -177,7 +182,9 @@ def remove_client(uname, room):
 # helper to determine what type of request based on header, form response
 def decide_request(req, uname, isPlayer, clients, room, ip, port):
   resp = ""
+  join_resp = "" # in case of player loading/creating sheet, must also let room know of new character
   req_type = req['type']
+  # for all include character name if exists
   if req_type == 'enter':
     # person has joined room, must take difference of new clients list and old
     # use to track person in room
@@ -185,10 +192,19 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status'}
   elif req_type == 'text':
     # someone is sending a message
-    resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
+    if isPlayer:
+      if room in r_u_char.keys() and uname in r_u_char[room].keys():
+        # display alias if character has taken name 
+        alias = r_u_char[room][uname]
+        resp = {'msg': alias + ' (' + uname + '): ' + req['msg'], 'color': 'blue', 'type': 'chat'}
+      else:
+        resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
+    else:
+      # DM
+      resp = {'msg': 'Dungeon Master (' + uname + '): ' + req['msg'], 'color': 'blue', 'type': 'chat'}
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
-    msg = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname)
+    msg = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname, room)
     resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
@@ -202,18 +218,40 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
         mongo.db['dmsheets'].replace_one({"$and":[{'uid': uid}, {'sheet_title': title}]}, req['msg'])
     #print(f'{uname} is leaving')
     remove_client(uname, room)
-    resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
+    if not isPlayer:
+      # if DM, must mark room as having no dm
+      if room in r_to_dm.keys():
+        r_to_dm[room] = False
+      resp = {'msg': 'The Dungeon Master (' + uname + ') has left the battle.', 'color': 'red', 'type': 'status'}
+    else:
+      # if player, remove aliased character name
+      curr_name = req['msg']['name'] # remove name from list
+      if room in r_u_char.keys() and uname in r_u_char[room].keys():
+        print('removed ' + uname)
+        r_u_char[room].pop(uname)
+        # display with char name if has one, otherwise don't
+        resp = {'msg': uname + ' (' + curr_name + ')  has left the battle.', 'color': 'red', 'type': 'status'}
+      else:
+        resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
   elif req_type == 'get_sheet':
     # client asking for psheet OR DM info, depending on type, send requested info
     # include both formatted HTML and raw JSON
     # can be either grabbing from db or forming based on raw JSON
+    # must both get the sheet and send message showing joining as character
     if 'title' in req.keys():
       # title indicates retrieving from db, use UID as key
       uid = session['u_token']
       title = req['title']
+      char_name = ''
       # find requested sheet in DB
       if isPlayer:
         found_raw = mongo.db['psheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
+        if room not in r_u_char.keys():
+          r_u_char[room] = {}
+        if uname not in r_u_char[room].keys():
+          r_u_char[room][uname] = ''
+        char_name = found_raw['name']
+        r_u_char[room][uname] = char_name   # store character name
         jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
         resp = {'msg': data, 'raw': found_raw, 'type': 'sheet', 'l2x': level_to_xp}
       else:
@@ -226,6 +264,12 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       raw_sheet['uid'] = session['u_token']
       if isPlayer:
         mongo.db['psheets'].insert_one(raw_sheet)
+        if room not in r_u_char.keys():
+          r_u_char[room] = {}
+        if uname not in r_u_char[room].keys():
+          r_u_char[room][uname] = ''
+        char_name = raw_sheet['name']
+        r_u_char[room][uname] = char_name  # store character name
       else:
         mongo.db['dmsheets'].insert_one(raw_sheet)
       # db.collection(u'psheets').add(raw_sheet)
@@ -234,32 +278,67 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
           resp = {'msg': data, 'raw': raw_sheet, 'type': 'sheet', 'l2x': level_to_xp}
       else:
           resp = {'msg': data, 'raw': raw_sheet, 'type': 'dmstuff'}
+    # create broadcast message for room status
+    if isPlayer:
+      join_resp = {'msg': uname + ' has joined the game as ' + char_name + '.', 'color': 'chocolate', 'type': 'status'}
+    else:
+      join_resp = {'msg': uname + ' has joined the game as Dungeon Master.', 'color': 'chocolate', 'type': 'status'}
   elif req_type == 'change_attr':
     # someone changed a numeric attribute
     direction = 'increased' if req['dir'] else 'decreased'
     lvl_up = ' Level Up!!!' if req['lvl'] else ''
     # keep same if not shortened version (should only be gems)
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
-    resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' +
-    str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up,
-    'color': 'chocolate', 'type': 'status'}
+    if room in r_u_char.keys() and uname in r_u_char[room].keys():
+      # display alias if character has taken name 
+      alias = r_u_char[room][uname]
+      resp = {'msg': alias + ' (' + uname + ') has ' + direction + ' their ' + attr + ' by ' +
+      str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up, 'color': 'chocolate', 'type': 'chat'}
+    else:
+      resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' +
+      str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up,
+      'color': 'chocolate', 'type': 'status'}
   elif req_type == 'change_text':
     # someone has added to textual attribute
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
-    resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.',
-    'color': 'chocolate', 'type': 'status'}
+    if room in r_u_char.keys() and uname in r_u_char[room].keys():
+      # display alias if character has taken name 
+      alias = r_u_char[room][uname]
+      resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['change']) + ' to their ' + attr + '.',
+      'color': 'chocolate', 'type': 'status'}
+    else:
+      resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.',
+      'color': 'chocolate', 'type': 'status'}
   elif req_type == 'add_gem':
     # someone has added new gems
-    resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) +
-    ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
+    if room in r_u_char.keys() and uname in r_u_char[room].keys():
+      # display alias if character has taken name 
+      alias = r_u_char[room][uname]
+      resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['change']) + ' ' + str(req['attr']) +
+      ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
+    else:
+      resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) +
+      ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
   elif req_type == 'add_item':
     # someone added either weapon, item, or spell
-    resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
-    '.', 'color': 'chocolate', 'type': 'status'}
+    if room in r_u_char.keys() and uname in r_u_char[room].keys():
+      # display alias if character has taken name 
+      alias = r_u_char[room][uname]
+      resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
+      '.', 'color': 'chocolate', 'type': 'status'}
+    else:
+      resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
+      '.', 'color': 'chocolate', 'type': 'status'}
   elif req_type == 'change_cond':
     # someone has changed their condition
-    resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
-    '.', 'color': 'chocolate', 'type': 'status'}
+    if room in r_u_char.keys() and uname in r_u_char[room].keys():
+      # display alias if character has taken name 
+      alias = r_u_char[room][uname]
+      resp = {'msg': alias + ' (' + uname + ') has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
+      '.', 'color': 'chocolate', 'type': 'status'}
+    else:
+      resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
+      '.', 'color': 'chocolate', 'type': 'status'}
   elif req_type == 'get_blank':
     if isPlayer:
       # player asking for blank html form to fill out
@@ -286,7 +365,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     else:
       all_sheets = dumps(mongo.db['dmsheets'].find({'uid': uid}))
     resp = {'msg': all_sheets, 'type': 'sheet_list'}
-  return dumps(resp) # convert JSON to string
+  return (dumps(resp), dumps(join_resp)) # convert JSON to string for both
 
 
 ###############################################
@@ -318,14 +397,20 @@ def chat_socket(ws):
     if broadcast:
       for client in r_to_client[room]:
         print("sending")
-        print(resp)
-        client.ws.send(resp)
+        print(resp[0])
+        client.ws.send(resp[0])
     else:
       # otherwise only to sender of event
       curr = u_to_client[uname]
       print("sending")
-      print(resp)
-      curr.ws.send(resp)
+      print(resp[0])
+      curr.ws.send(resp[0])
+      if msg['type'] == 'get_sheet':
+        # special case, broadcast join message
+        for client in r_to_client[room]:
+          print("sending")
+          print(resp[1])
+          client.ws.send(resp[1])
 
 
 @app.route('/')
@@ -344,6 +429,14 @@ def play():
 # redirect them to play url
 @app.route('/joinRoom', methods=['POST'])
 def join_post():
+  # first check, to make sure player is not joining as DM when DM already exists
+  if request.form['isPlayer'] == 'DM':
+    curr_room = request.form['rname']
+    if curr_room in r_to_dm.keys():
+      if r_to_dm[curr_room]:
+        # if set, already DM, shouldn't allow
+        return render_template('index.html', badDm=True)
+    r_to_dm[curr_room] = True # otherwise room as DM now
   # store session info for use
   session['name'] = request.form['uname']
   session['room'] = request.form['rname']
@@ -373,9 +466,14 @@ def login_account():
   try:
     user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
     session['u_token'] = str(request.form['email'])
-    return redirect('/static/index.html', code=302)
+    return render_template('index.html', badDm=False)
   except:
     return redirect('/static/invalid.html', code=302)
+
+@app.route('/login', methods=['GET'])
+def return_index():
+  # on a get, means returning to login
+  return render_template('index.html', badDm=False)
 
 def get_dm_sheet_form():
   doc, tag, text= Doc().tagtext()
@@ -622,117 +720,126 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
       with tag('div', klass = 'col title'):
         text(raw_resp['sheet_title'])
     with tag('div', klass = 'row'):
-      with tag('div', klass = 'col namebox'):
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title'):
-            text('~ Character Info ~')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col namefields', id='name'):
-            text('Name: ' + raw_resp['name'])
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col namefields', id='class'):
-            text('Class: ' + raw_resp['class'])
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col namefields', id='race'):
-            text('Race: ' + raw_resp['race'])
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col namefields', id='align'):
-            text('Alignment: ' + align_abbrev[(raw_resp['align'])])
-      with tag('div', klass = 'col levelbox'):
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title'):
-            text('~ Level/XP ~')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields', id='level'):
-            text('Level: ' + str(raw_resp['level']))
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields', id='xp'):
-            text('Experience Points: ' + str(raw_resp['xp']))
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields', id='next_xp'):
-            text('Next Level Exp: ' + level_to_xp[(int(raw_resp['level']) + 1)])
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields', id='langs'):
-            if 'languages' in raw_resp.keys():
-              text('Languages: ' + (', ').join(raw_resp['languages']))
-            else:
-              text('Languages: ')
-            doc.asis('<button class="btn add_text add_com" id="add_lang">Add</button>')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields', id='condenhan'):
-            if 'enhan' in raw_resp.keys():
-              text('Conditions & Enchantments: ' + (', ').join(raw_resp['enhan']))
-            else:
-              text('Conditions & Enchantments: ')
-            doc.asis('<button class="btn add_text add_com" id="add_cond">Add</button>')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields', id='resist'):
-            if 'resist' in raw_resp.keys():
-              text('Resistances: ' + (', ').join(raw_resp['resist']))
-            else:
-              text('Resistances: ')
-            doc.asis('<button class="btn add_text add_com" id="add_resist">Add</button>')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col levelfields', id='specs'):
-            if 'specs' in raw_resp.keys():
-              text('Special Skills & Abilities: ' + (', ').join(raw_resp['special']))
-            else:
-              text('Special Skills & Abilities: ')
-            doc.asis('<button class="btn add_text add_com" id="add_spec">Add</button>')
-    with tag('div', klass = 'row'):
-      with tag('div', klass = 'col attrbox'):
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title'):
-            text('~ Ability Scores ~')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col str', id='str'):
-            text(str(raw_resp['ability-scores']['str']) + ' Strength')
-          with tag('div', klass = 'col str', id='str_mod'):
-            text(str(modifier(raw_resp['ability-scores']['str'])) + ' Modifier')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col dex', id='dex'):
-            text(str(raw_resp['ability-scores']['dex']) + ' Dexterity')
-          with tag('div', klass = 'col str', id='dex_mod'):
-            text(str(modifier(raw_resp['ability-scores']['dex'])) + ' Modifier')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col const', id='const'):
-            text(str(raw_resp['ability-scores']['const']) + ' Constitution')
-          with tag('div', klass = 'col str', id='const_mod'):
-            text(str(modifier(raw_resp['ability-scores']['const'])) + ' Modifier')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col intell', id='intell'):
-            text(str(raw_resp['ability-scores']['intell']) + ' Intelligence')
-          with tag('div', klass = 'col str', id='intell_mod'):
-            text(str(modifier(raw_resp['ability-scores']['intell'])) + ' Modifier')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col wis', id='wis'):
-            text(str(raw_resp['ability-scores']['wis']) + ' Wisdom')
-          with tag('div', klass = 'col str', id='wis_mod'):
-            text(str(modifier(raw_resp['ability-scores']['wis'])) + ' Modifier')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col char', id='char'):
-            text(str(raw_resp['ability-scores']['char']) + ' Charisma')
-          with tag('div', klass = 'col str', id='char_mod'):
-            text(str(modifier(raw_resp['ability-scores']['char'])) + ' Modifier')
-      with tag('div', klass = 'col statbox'):
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title'):
-            text('~ Stats ~')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col armor', id='armor'):
-            # armor = dex modifier + 10
-            text(str(modifier(raw_resp['ability-scores']['dex']) + 10) + " Armor Class")
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col hp', id='hp'):
-            text(str(raw_resp['hp']) + " Hit Points")
-    with tag('div', klass = 'row'):
-      with tag('div', klass = 'col wepbox', id='weps'):
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title', id='show_wep'):
-            text('~ Weapons ~')
-          with tag('div', klass = 'col title', id='show_spell'):
-            text('~ Spells ~ (click to view)')
-        with tag('div', id='shown', klass='pweps'):
+      with tag('div', klass = 'col title showbox', id='show_info'):
+        text('Character/Level Info')
+      with tag('div', klass = 'col title showbox', id='show_stats'):
+        text('Stats (click to view)')
+      with tag('div', klass = 'col title showbox', id='show_ws'):
+        text('Weapons/Spells (click to view)')
+      with tag('div', klass = 'col title showbox', id='show_items'):
+        text('Items & Condition (click to view)')
+    with tag('div', id='shown', klass='pinfo'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col namebox'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Character Info ~')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col namefields', id='name'):
+              text('Name: ' + raw_resp['name'])
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col namefields', id='class'):
+              text('Class: ' + raw_resp['class'])
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col namefields', id='race'):
+              text('Race: ' + raw_resp['race'])
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col namefields', id='align'):
+              text('Alignment: ' + align_abbrev[(raw_resp['align'])])
+        with tag('div', klass = 'col levelbox'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Level/XP ~')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col levelfields', id='level'):
+              text('Level: ' + str(raw_resp['level']))
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col levelfields', id='xp'):
+              text('Experience Points: ' + str(raw_resp['xp']))
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col levelfields', id='next_xp'):
+              text('Next Level Exp: ' + level_to_xp[(int(raw_resp['level']) + 1)])
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col levelfields', id='langs'):
+              if 'languages' in raw_resp.keys():
+                text('Languages: ' + (', ').join(raw_resp['languages']))
+              else:
+                text('Languages: ')
+              doc.asis('<button class="btn add_text add_com" id="add_lang">Add</button>')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col levelfields', id='condenhan'):
+              if 'enhan' in raw_resp.keys():
+                text('Conditions & Enchantments: ' + (', ').join(raw_resp['enhan']))
+              else:
+                text('Conditions & Enchantments: ')
+              doc.asis('<button class="btn add_text add_com" id="add_cond">Add</button>')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col levelfields', id='resist'):
+              if 'resist' in raw_resp.keys():
+                text('Resistances: ' + (', ').join(raw_resp['resist']))
+              else:
+                text('Resistances: ')
+              doc.asis('<button class="btn add_text add_com" id="add_resist">Add</button>')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col levelfields', id='specs'):
+              if 'specs' in raw_resp.keys():
+                text('Special Skills & Abilities: ' + (', ').join(raw_resp['special']))
+              else:
+                text('Special Skills & Abilities: ')
+              doc.asis('<button class="btn add_text add_com" id="add_spec">Add</button>')
+    with tag('div', id='hidden', klass='pstats'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col attrbox'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Ability Scores ~')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col str', id='str'):
+              text(str(raw_resp['ability-scores']['str']) + ' Strength')
+            with tag('div', klass = 'col str', id='str_mod'):
+              text(str(modifier(raw_resp['ability-scores']['str'])) + ' Modifier')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col dex', id='dex'):
+              text(str(raw_resp['ability-scores']['dex']) + ' Dexterity')
+            with tag('div', klass = 'col str', id='dex_mod'):
+              text(str(modifier(raw_resp['ability-scores']['dex'])) + ' Modifier')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col const', id='const'):
+              text(str(raw_resp['ability-scores']['const']) + ' Constitution')
+            with tag('div', klass = 'col str', id='const_mod'):
+              text(str(modifier(raw_resp['ability-scores']['const'])) + ' Modifier')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col intell', id='intell'):
+              text(str(raw_resp['ability-scores']['intell']) + ' Intelligence')
+            with tag('div', klass = 'col str', id='intell_mod'):
+              text(str(modifier(raw_resp['ability-scores']['intell'])) + ' Modifier')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col wis', id='wis'):
+              text(str(raw_resp['ability-scores']['wis']) + ' Wisdom')
+            with tag('div', klass = 'col str', id='wis_mod'):
+              text(str(modifier(raw_resp['ability-scores']['wis'])) + ' Modifier')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col char', id='char'):
+              text(str(raw_resp['ability-scores']['char']) + ' Charisma')
+            with tag('div', klass = 'col str', id='char_mod'):
+              text(str(modifier(raw_resp['ability-scores']['char'])) + ' Modifier')
+        with tag('div', klass = 'col statbox'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Stats ~')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col armor', id='armor'):
+              # armor = dex modifier + 10
+              text(str(modifier(raw_resp['ability-scores']['dex']) + 10) + " Armor Class")
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col hp', id='hp'):
+              text(str(raw_resp['hp']) + " Hit Points")
+    with tag('div', id='hidden', klass='pws'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col wepbox', id='weps'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Weapons ~')
           with tag('div', klass = 'row'):
             with tag('div', klass = 'col wepfields'):
               text('Weapon')
@@ -744,24 +851,26 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
               text('Range')
             with tag('div', klass = 'col wepfields'):
               text('Notes')
-            if 'weps' in raw_resp.keys():
-              for weapon in raw_resp['weps']:
-                with tag('div', klass = 'row'):
-                  with tag('div', klass = 'col wepfields'):
-                    text(weapon['name'])
-                  with tag('div', klass = 'col wepfields'):
-                    text(weapon['to_hit'])
-                  with tag('div', klass = 'col wepfields'):
-                    text(weapon['damage'])
-                  with tag('div', klass = 'col wepfields'):
-                    text(weapon['range'])
-                  with tag('div', klass = 'col wepfields'):
-                    text(weapon['notes'])
+          if 'weps' in raw_resp.keys():
+            for weapon in raw_resp['weps']:
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col wepfields'):
+                  text(weapon['name'])
+                with tag('div', klass = 'col wepfields'):
+                  text(weapon['to_hit'])
+                with tag('div', klass = 'col wepfields'):
+                  text(weapon['damage'])
+                with tag('div', klass = 'col wepfields'):
+                  text(weapon['range'])
+                with tag('div', klass = 'col wepfields'):
+                  text(weapon['notes'])
           with tag('div', klass = 'row', id="wep_but"):
             # use element above to insert new weps
             with tag('div', klass = 'col wepfields title'):
               doc.asis('<button class="btn add_text add_table" id="add_wep">Add</button>')
-        with tag('div', id='hidden', klass='pspells'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Spells ~')
           with tag('div', klass = 'row'):
             with tag('div', klass = 'col spellfields'):
               text('Level')
@@ -798,92 +907,93 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
             # use element above to insert new spells
             with tag('div', klass = 'col spellfields title'):
                 doc.asis('<button class="btn add_text add_table" id="add_spell">Add</button>')
-    with tag('div', klass = 'row'):
-      with tag('div', klass = 'col itembox'):
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title'):
-            text('~ Items ~')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col itemfields'):
-            text('Name')
-          with tag('div', klass = 'col itemfields'):
-            text('Weight')
-          with tag('div', klass = 'col itemfields'):
-            text('Notes')
-        if 'items' in raw_resp.keys():
-          for item in raw_resp['items']:
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col itemfields'):
-                text(item['name'])
-              with tag('div', klass = 'col itemfields'):
-                text(item['weight'])
-              with tag('div', klass = 'col itemfields'):
-                text(item['notes'])
-        with tag('div', klass = 'row', id="item_but"):
-          # use element above to insert new items
-          with tag('div', klass = 'col itemfields title'):
-            doc.asis('<button class="btn add_text add_table" id="add_item">Add</button>')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col itemfields'):
-            text('Total Weight Carried: ')
-          with tag('div', klass = 'col itemfields', id='weight_total'):
-            if 'items' in raw_resp.keys():
-              text(sum(int(item['weight']) for item in raw_resp['items']))
-            else:
-              text('0')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col itemfields'):
-            text('Max Carry Weight: ')
-          with tag('div', klass = 'col itemfields', id='max_weight'):
-            text((int(raw_resp['ability-scores']['str']) * 15))
-      with tag('div', klass = 'col treasbox'):
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title'):
-            text('~ Treasures ~')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col'):
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields', id='pp'):
-                text('PP: ' + str(raw_resp['treasures']['pp']))
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields', id='gp'):
-                text('GP: ' + str(raw_resp['treasures']['gp']))
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields', id='ep'):
-                text('EP: ' + str(raw_resp['treasures']['ep']))
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields', id='sp'):
-                text('SP: ' + str(raw_resp['treasures']['sp']))
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col treasfields', id='cp'):
-                text('CP: ' + str(raw_resp['treasures']['cp']))
-          with tag('div', klass ='col', id='gems'):
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col title'):
-                text('~ Gems ~')
-            if 'gems' in raw_resp['treasures'].keys():
-              for gem in raw_resp['treasures']['gems']:
-                with tag('div', klass ='row'):
-                  with tag('div', klass = 'col treasfields', id=gem['name']):
-                    text(gem['name'] + ": " + str(gem['num']))
-            with tag('div', klass = 'row', id="gem_but"):
-              # use element above to insert new gems
-              with tag('div', klass = 'col treasfields title'):
-                doc.asis('<button class="btn add_text new_gem" id="add_gem">Add</button>')
-    with tag('div', klass = 'row'):
-      with tag('div', klass = 'col condbox'):
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col title'):
-            text('~ Condition/Speed ~')
-        with tag('div', klass = 'row'):
-          with tag('div', klass = 'col condfields', id='base_speed'):
-            text("Base Speed: " + str(raw_resp['base_speed']))
-          with tag('div', klass = 'col condfields', id='curr_speed'):
-            text("Current Speed: " + str(raw_resp['curr_speed']))
-          with tag('div', klass = 'col condfields', id='cond'):
-            with tag('span', id='cond_text'):
-              text("Current Condition: " + raw_resp['condition'])
-            doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
+    with tag('div', id='hidden', klass='pitems'):
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col itembox'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Items ~')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col itemfields'):
+              text('Name')
+            with tag('div', klass = 'col itemfields'):
+              text('Weight')
+            with tag('div', klass = 'col itemfields'):
+              text('Notes')
+          if 'items' in raw_resp.keys():
+            for item in raw_resp['items']:
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col itemfields'):
+                  text(item['name'])
+                with tag('div', klass = 'col itemfields'):
+                  text(item['weight'])
+                with tag('div', klass = 'col itemfields'):
+                  text(item['notes'])
+          with tag('div', klass = 'row', id="item_but"):
+            # use element above to insert new items
+            with tag('div', klass = 'col itemfields title'):
+              doc.asis('<button class="btn add_text add_table" id="add_item">Add</button>')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col itemfields'):
+              text('Total Weight Carried: ')
+            with tag('div', klass = 'col itemfields', id='weight_total'):
+              if 'items' in raw_resp.keys():
+                text(sum(int(item['weight']) for item in raw_resp['items']))
+              else:
+                text('0')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col itemfields'):
+              text('Max Carry Weight: ')
+            with tag('div', klass = 'col itemfields', id='max_weight'):
+              text((int(raw_resp['ability-scores']['str']) * 15))
+        with tag('div', klass = 'col treasbox'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Treasures ~')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col'):
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col treasfields', id='pp'):
+                  text('PP: ' + str(raw_resp['treasures']['pp']))
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col treasfields', id='gp'):
+                  text('GP: ' + str(raw_resp['treasures']['gp']))
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col treasfields', id='ep'):
+                  text('EP: ' + str(raw_resp['treasures']['ep']))
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col treasfields', id='sp'):
+                  text('SP: ' + str(raw_resp['treasures']['sp']))
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col treasfields', id='cp'):
+                  text('CP: ' + str(raw_resp['treasures']['cp']))
+            with tag('div', klass ='col', id='gems'):
+              with tag('div', klass = 'row'):
+                with tag('div', klass = 'col title'):
+                  text('~ Gems ~')
+              if 'gems' in raw_resp['treasures'].keys():
+                for gem in raw_resp['treasures']['gems']:
+                  with tag('div', klass ='row'):
+                    with tag('div', klass = 'col treasfields', id=gem['name']):
+                      text(gem['name'] + ": " + str(gem['num']))
+              with tag('div', klass = 'row', id="gem_but"):
+                # use element above to insert new gems
+                with tag('div', klass = 'col treasfields title'):
+                  doc.asis('<button class="btn add_text new_gem" id="add_gem">Add</button>')
+      with tag('div', klass = 'row'):
+        with tag('div', klass = 'col condbox'):
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col title'):
+              text('~ Condition/Speed ~')
+          with tag('div', klass = 'row'):
+            with tag('div', klass = 'col condfields', id='base_speed'):
+              text("Base Speed: " + str(raw_resp['base_speed']))
+            with tag('div', klass = 'col condfields', id='curr_speed'):
+              text("Current Speed: " + str(raw_resp['curr_speed']))
+            with tag('div', klass = 'col condfields', id='cond'):
+              with tag('span', id='cond_text'):
+                text("Current Condition: " + raw_resp['condition'])
+              doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
 
   else:
     #fake response and probably wont have the same parameters as a real one
