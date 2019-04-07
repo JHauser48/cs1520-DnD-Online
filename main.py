@@ -483,8 +483,11 @@ def login_account():
     session['u_token'] = str(request.form['email'])
     email_strip = str(request.form['email']).replace('.', '')
     user_name = list(mongo.db['unames'].find({}, {email_strip: 1}))
-    e_key = user_name[0]
-    session['name'] = e_key[email_strip]
+    for dict_val in user_name:
+      if len(dict_val) > 1:
+        e_key = dict_val[email_strip]
+    print(e_key)
+    session['name'] = e_key
     print(session['name'])
     return render_template('index.html', badDm=False)
   except:
