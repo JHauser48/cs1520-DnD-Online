@@ -107,19 +107,22 @@ dice_info = {
   5: ('(d20): ', 20),
 }
 # helper to roll dice, takes dice type and adv/disadv attributes
-def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room):
+def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room, isPlayer):
   mod_val = modifier(mod_v)
   mod_msg = (' (modifier) ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
   if sum(dice_list) == 0:
     return "No rolls selected..."
 
   rolls = roll_all(dice_list)
-  if room in r_u_char.keys() and uname in r_u_char[room].keys():
-    # display alias if character has taken name 
-    alias = r_u_char[room][uname]
-    msg = alias + ' (' + uname + ') rolled:' + mod_msg + '</br>'
+  if isPlayer:
+    if room in r_u_char.keys() and uname in r_u_char[room].keys():
+      # display alias if character has taken name 
+      alias = r_u_char[room][uname]
+      msg = alias + ' (' + uname + ') rolled:' + mod_msg + '</br>'
+    else:
+      msg = uname + ' rolled:' + mod_msg + '</br>'
   else:
-    msg = uname + ' rolled:' + mod_msg + '</br>'
+    msg = 'Dungeon Master (' + uname + ') rolled:' + mod_msg + '</br>'
   msg += rolls[0]
   print(rolls[0])
   if (adv != dis):
@@ -189,23 +192,26 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     # person has joined room, must take difference of new clients list and old
     # use to track person in room
     add_client(clients, room, uname, ip, port)
-    resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status'}
+    resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status',
+    'weight': 'normal'}
   elif req_type == 'text':
     # someone is sending a message
     if isPlayer:
       if room in r_u_char.keys() and uname in r_u_char[room].keys():
         # display alias if character has taken name 
         alias = r_u_char[room][uname]
-        resp = {'msg': alias + ' (' + uname + '): ' + req['msg'], 'color': 'blue', 'type': 'chat'}
+        resp = {'msg': alias + ' (' + uname + '): ' + req['msg'], 'color': 'blue', 'type': 'chat',
+        'weight': 'normal'}
       else:
-        resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat'}
+        resp = {'msg': uname + ': ' + req['msg'], 'color': 'blue', 'type': 'chat', 'weight':'normal'}
     else:
-      # DM
-      resp = {'msg': 'Dungeon Master (' + uname + '): ' + req['msg'], 'color': 'blue', 'type': 'chat'}
+      # DM (bold + urple)
+      resp = {'msg': 'Dungeon Master (' + uname + '): ' + req['msg'], 'color': 'purple', 'type': 'chat',
+      'weight': 'bold'}
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
-    msg = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname, room)
-    resp = {'msg': msg, 'color':'green', 'weight':'bold', 'type': 'roll'}
+    msg = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname, room, isPlayer)
+    resp = {'msg': msg, 'color':'green', 'weight': 'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
     # also need to update sheet for leaving user, key = UID + title, IF NOT EMPTY
@@ -222,7 +228,8 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       # if DM, must mark room as having no dm
       if room in r_to_dm.keys():
         r_to_dm[room] = False
-      resp = {'msg': 'The Dungeon Master (' + uname + ') has left the battle.', 'color': 'red', 'type': 'status'}
+      resp = {'msg': 'The Dungeon Master (' + uname + ') has left the battle.', 'color': 'red', 'type': 'status',
+      'weight': 'bold'}
     else:
       # if player, remove aliased character name
       curr_name = req['msg']['name'] # remove name from list
@@ -230,9 +237,10 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
         print('removed ' + uname)
         r_u_char[room].pop(uname)
         # display with char name if has one, otherwise don't
-        resp = {'msg': uname + ' (' + curr_name + ')  has left the battle.', 'color': 'red', 'type': 'status'}
+        resp = {'msg': uname + ' (' + curr_name + ')  has left the battle.', 'color': 'red', 'type': 'status',
+        'weight': 'normal'}
       else:
-        resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status'}
+        resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status', 'weight': 'normal'}
   elif req_type == 'get_sheet':
     # client asking for psheet OR DM info, depending on type, send requested info
     # include both formatted HTML and raw JSON
@@ -280,9 +288,11 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
           resp = {'msg': data, 'raw': raw_sheet, 'type': 'dmstuff'}
     # create broadcast message for room status
     if isPlayer:
-      join_resp = {'msg': uname + ' has joined the game as ' + char_name + '.', 'color': 'chocolate', 'type': 'status'}
+      join_resp = {'msg': uname + ' has joined the game as ' + char_name + '.', 'color': 'chocolate', 'type': 'status',
+      'weight': 'normal'}
     else:
-      join_resp = {'msg': uname + ' has joined the game as Dungeon Master.', 'color': 'chocolate', 'type': 'status'}
+      join_resp = {'msg': uname + ' has joined the game as Dungeon Master.', 'color': 'chocolate', 'type': 'status', 
+      'weight': 'bold'}
   elif req_type == 'change_attr':
     # someone changed a numeric attribute
     direction = 'increased' if req['dir'] else 'decreased'
@@ -293,11 +303,12 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       # display alias if character has taken name 
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has ' + direction + ' their ' + attr + ' by ' +
-      str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up, 'color': 'chocolate', 'type': 'chat'}
+      str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up, 'color': 'chocolate', 'type': 'chat',
+      'weight': 'normal'}
     else:
       resp = {'msg': uname + ' has ' + direction + ' their ' + attr + ' by ' +
       str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up,
-      'color': 'chocolate', 'type': 'status'}
+      'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
   elif req_type == 'change_text':
     # someone has added to textual attribute
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
@@ -305,40 +316,40 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       # display alias if character has taken name 
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['change']) + ' to their ' + attr + '.',
-      'color': 'chocolate', 'type': 'status'}
+      'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
     else:
       resp = {'msg': uname + ' has added ' + str(req['change']) + ' to their ' + attr + '.',
-      'color': 'chocolate', 'type': 'status'}
+      'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
   elif req_type == 'add_gem':
     # someone has added new gems
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
       # display alias if character has taken name 
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['change']) + ' ' + str(req['attr']) +
-      ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
+      ' to their inventory.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
     else:
       resp = {'msg': uname + ' has added ' + str(req['change']) + ' ' + str(req['attr']) +
-      ' to their inventory.', 'color': 'chocolate', 'type': 'status'}
+      ' to their inventory.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
   elif req_type == 'add_item':
     # someone added either weapon, item, or spell
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
       # display alias if character has taken name 
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
-      '.', 'color': 'chocolate', 'type': 'status'}
+      '.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
     else:
       resp = {'msg': uname + ' has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
-      '.', 'color': 'chocolate', 'type': 'status'}
+      '.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
   elif req_type == 'change_cond':
     # someone has changed their condition
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
       # display alias if character has taken name 
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
-      '.', 'color': 'chocolate', 'type': 'status'}
+      '.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
     else:
       resp = {'msg': uname + ' has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
-      '.', 'color': 'chocolate', 'type': 'status'}
+      '.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
   elif req_type == 'get_blank':
     if isPlayer:
       # player asking for blank html form to fill out

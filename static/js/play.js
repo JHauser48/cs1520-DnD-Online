@@ -59,11 +59,11 @@ $(document).ready(function(){
       data = JSON.parse(msg.data); //convert to JS object
       switch (data.type) {
         case 'status':
-          $('#chatlog').append('<p style=\'color:' + data.color + '\'>&lt;' + data.msg + '&gt;</p>');
+          $('#chatlog').append('<p style=\'color:' + data.color + ';' + 'font-weight:' + data.weight +'\'>&lt;' + data.msg + '&gt;</p>');
           $('#chatlog').scrollTop($('#chatlog')[0].scrollHeight);
           break;
         case 'chat':
-          $('#chatlog').append('<p style=\'color:' + data.color + '\'>' + data.msg + '</p>');
+          $('#chatlog').append('<p style=\'color:' + data.color + ';' + 'font-weight:' + data.weight +'\'>' + data.msg + '</p>');
           $('#chatlog').scrollTop($('#chatlog')[0].scrollHeight);
           break;
         case 'roll':
