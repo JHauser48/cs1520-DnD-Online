@@ -449,7 +449,7 @@ def join_post():
         return render_template('index.html', badDm=True)
     r_to_dm[curr_room] = True # otherwise room as DM now
   # store session info for use
-  session['name'] = request.form['uname']
+  #session['name'] = request.form['uname']
   session['room'] = request.form['rname']
   session['isPlayer'] = True if request.form['isPlayer'] == "Player" else False
   return redirect(url_for('.play'), code=302)
@@ -467,7 +467,10 @@ def create_account():
   try:
     user = auth.create_user_with_email_and_password(str(request.form['email']), str(request.form['password']))
     auth.send_email_verification(user['idToken'])
-    newData = {u"username": str(request.form['username']), u"email": str(request.form['email'])}
+    email_strip = str(request.form['email']).replace('.', '')
+    pb_username = str(request.form['username'])
+    name = {email_strip: pb_username}
+    mongo.db['unames'].insert_one(name)
     return redirect('/', code=302)
   except:
     return redirect('/static/taken.html', code=302)
@@ -476,7 +479,13 @@ def create_account():
 def login_account():
   try:
     user_acc = auth.sign_in_with_email_and_password(str(request.form['email']), str(request.form['password']))
+    db= fb.database()
     session['u_token'] = str(request.form['email'])
+    email_strip = str(request.form['email']).replace('.', '')
+    user_name = list(mongo.db['unames'].find({}, {email_strip: 1}))
+    e_key = user_name[0]
+    session['name'] = e_key[email_strip]
+    print(session['name'])
     return render_template('index.html', badDm=False)
   except:
     return redirect('/static/invalid.html', code=302)
