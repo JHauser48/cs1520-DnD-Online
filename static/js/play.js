@@ -1002,6 +1002,18 @@ $(document).ready(function(){
       }
     }
 
+    document.getElementById("stat_change").style.display ="none";
+
+    function openStatChange() {
+        if(document.getElementById("stat_change").style.display == "block"){
+             document.getElementById("stat_change").style.display = "none";     
+        }else{
+          document.getElementById("stat_change").style.display = "block";   
+        }
+    }
+
+    document.getElementById('stat_btn').addEventListener('click', openStatChange);
+
     //function to deal with player adding in csv item (e.g. languages)
     function add_comma_val(but_id, sheet_json) {
       //insert text box for entering in new value

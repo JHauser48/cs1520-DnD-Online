@@ -232,6 +232,21 @@ input[type="radio"]{
   margin: 15px;
 }
 
+.btn3{
+  background-color: #000000;
+  border: 3px solid;
+  color: #FF0000;
+  padding: 8px 16px;
+  text-decoration: none;
+  margin: 4px 3px;
+  cursor: pointer;
+  margin-right: auto;
+  margin-left: 210px;
+  font-size: 16px;
+  border-radius: 12px;
+  border-color: #FF0000;
+}
+
 .in.add_text.add_gem {
   width: 70%;
 }
@@ -287,3 +302,16 @@ label {
 .btn-group button:not(:last-child) {
   border-right: none; /* Prevent double borders */
 }
+
+.modal {
+  position: absolute;
+  top: 50%;
+  display: none; /* Hidden by default */
+  width: 100%; /* Full width */
+  height: 15%; /* Full height */
+  margin: -100px 0 0 -150px;
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
+}
+
+
