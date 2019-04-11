@@ -310,6 +310,7 @@ label {
   width: 100%; /* Full width */
   height: 15%; /* Full height */
   margin: -100px 0 0 -150px;
+  margin-left: 10%;
   background-color: rgb(0,0,0); /* Fallback color */
   background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
 }
