@@ -29,7 +29,7 @@
 .field {
   width: 200px;
   margin-left: 30px;
-  border: 2px solid grey;
+  border: 3px solid black;
   border-radius: 2px;
   display: inline-block;
 }
@@ -40,7 +40,9 @@
 }
 
 input[type="radio"]{
-		display: inline-block;
+    margin-top: 8%;
+    margin-right: 12px;
+    display: inline-block;
     /*margin-right: 5%;*/
 }
 
@@ -69,7 +71,8 @@ div.topnavbar{
       padding: 14px 320px;
       text-decoration: none;
       font-size: 20px;
-      width: 22%;
+      width: 26%;
+      white-space: nowrap;
   }
   div.topnavbar a:hover{
       background-color: #8B0000;
@@ -88,6 +91,6 @@ div.topnavbar{
   .error{
     color: red;
     background-color: black;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bolder;
 }
