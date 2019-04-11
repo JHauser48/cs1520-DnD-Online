@@ -192,8 +192,12 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     # person has joined room, must take difference of new clients list and old
     # use to track person in room
     add_client(clients, room, uname, ip, port)
-    resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status',
-    'weight': 'normal'}
+    if isPlayer:
+      resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status',
+      'weight': 'normal'}
+    else:
+       resp = {'msg': uname + ' has entered as Dungeon Master!', 'color': 'red', 'type': 'status',
+      'weight': 'normal'}
   elif req_type == 'text':
     # someone is sending a message
     if isPlayer:
@@ -211,7 +215,10 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
     msg = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname, room, isPlayer)
-    resp = {'msg': msg, 'color':'green', 'weight': 'bold', 'type': 'roll'}
+    if isPlayer:
+      resp = {'msg': msg, 'color':'green', 'weight': 'bold', 'type': 'roll'}
+    else:
+      resp = {'msg': msg, 'color':'purple', 'weight': 'bold', 'type': 'roll'}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
     # also need to update sheet for leaving user, key = UID + title, IF NOT EMPTY
