@@ -525,109 +525,118 @@ def get_sheet_form():
       text('Name your Sheet: ')
       doc.asis('<input class="in create_p" id="ptitle" placeholder="Title">')
   with tag('div', klass = 'row'):
-    with tag('div', klass = 'col namebox'):
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col title'):
-          text('~ Character Info ~')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col namefields', id='name'):
-          text('Enter Character Name: ')
-          doc.asis('<input class="in create_p" id="pname" placeholder="Name">')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col namefields', id='class'):
-          text('Class: ')
-          doc.asis('<input class="in create_p" id="pclass" placeholder="Class">')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col namefields', id='race'):
-          text('Race: ')
-          doc.asis('<input class="in create_p" id="prace" placeholder="Race">')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col namefields', id='align'):
-          text('Alignment: ')
-          with tag('select', klass='sel create_p', id="palign"):
-            with tag('option', value='lg'):
-              text('Lawful Good')
-            with tag('option', value='ng'):
-              text('Neutral Good')
-            with tag('option', value='cg'):
-              text('Chaotic Good')
-            with tag('option', value='ln'):
-              text('Lawful Neutral')
-            with tag('option', value='neu'):
-              text('Neutral')
-            with tag('option', value='cn'):
-              text('Chaotic Neutral')
-            with tag('option', value='le'):
-              text('Lawful Evil')
-            with tag('option', value='ne'):
-              text('Neutral Evil')
-            with tag('option', value='ce'):
-              text('Chaotic Evil')
-    with tag('div', klass = 'col levelbox'):
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col title'):
-          text('~ Knowledge ~')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col levelfields', id='langs'):
-          text('Languages: ')
-          doc.asis('<button class="btn add_text add_com" id="add_lang">Add</button>')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col levelfields', id='condenhan'):
-          text('Conditions & Enchantments: ')
-          doc.asis('<button class="btn add_text add_com" id="add_cond">Add</button>')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col levelfields', id='resist'):
-          text('Resistances: ')
-          doc.asis('<button class="btn add_text add_com" id="add_resist">Add</button>')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col levelfields', id='specs'):
-          text('Special Skills & Abilities: ')
-          doc.asis('<button class="btn add_text add_com" id="add_spec">Add</button>')
-  with tag('div', klass = 'row'):
-    with tag('div', klass = 'col attrbox'):
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col title'):
-          text('~ Ability Scores ~')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col str', id='str'):
-          text('Strength: ')
-          doc.asis('<input class="in create_p attr" id="pstr" placeholder="Strength">')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col dex', id='dex'):
-          text('Dexterity: ')
-          doc.asis('<input class="in create_p attr" id="pdex" placeholder="Dexterity">')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col const', id='const'):
-          text('Constitution: ')
-          doc.asis('<input class="in create_p attr" id="pconst" placeholder="Constitution">')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col intell', id='intell'):
-          text('Intelligence: ')
-          doc.asis('<input class="in create_p attr" id="pintell" placeholder="Intelligence">')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col wis', id='wis'):
-          text('Wisdom: ')
-          doc.asis('<input class="in create_p attr" id="pwis" placeholder="Wisdom">')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col char', id='char'):
-          text('Charisma: ')
-          doc.asis('<input class="in create_p attr" id="pchar" placeholder="Charisma">')
-    with tag('div', klass = 'col statbox'):
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col title'):
-          text('~ Stats ~')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col hp', id='hp'):
-          text("Hit Points: ")
-          doc.asis('<input class="in create_p attr" id="php" placeholder="Hit Points">')
-  with tag('div', klass = 'row'):
-    with tag('div', klass = 'col wepbox', id='weps'):
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col title', id='show_wep'):
-          text('~ Weapons ~')
-        with tag('div', klass = 'col title', id='show_spell'):
-          text('~ Spells ~ (click to view)')
-      with tag('div', id='shown', klass='pweps'):
+      with tag('div', klass = 'col title showbox', id='show_info'):
+        text('Character/Level Info')
+      with tag('div', klass = 'col title showbox', id='show_stats'):
+        text('Stats (click to view)')
+      with tag('div', klass = 'col title showbox', id='show_ws'):
+        text('Weapons/Spells (click to view)')
+      with tag('div', klass = 'col title showbox', id='show_items'):
+        text('Items & Condition (click to view)')
+  with tag('div', id='shown', klass='pinfo'):
+    with tag('div', klass = 'row'):
+      with tag('div', klass = 'col namebox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Character Info ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col namefields', id='name'):
+            text('Enter Character Name: ')
+            doc.asis('<input class="in create_p" id="pname" placeholder="Name">')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col namefields', id='class'):
+            text('Class: ')
+            doc.asis('<input class="in create_p" id="pclass" placeholder="Class">')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col namefields', id='race'):
+            text('Race: ')
+            doc.asis('<input class="in create_p" id="prace" placeholder="Race">')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col namefields', id='align'):
+            text('Alignment: ')
+            with tag('select', klass='sel create_p', id="palign"):
+              with tag('option', value='lg'):
+                text('Lawful Good')
+              with tag('option', value='ng'):
+                text('Neutral Good')
+              with tag('option', value='cg'):
+                text('Chaotic Good')
+              with tag('option', value='ln'):
+                text('Lawful Neutral')
+              with tag('option', value='neu'):
+                text('Neutral')
+              with tag('option', value='cn'):
+                text('Chaotic Neutral')
+              with tag('option', value='le'):
+                text('Lawful Evil')
+              with tag('option', value='ne'):
+                text('Neutral Evil')
+              with tag('option', value='ce'):
+                text('Chaotic Evil')
+      with tag('div', klass = 'col levelbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Knowledge ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col levelfields', id='langs'):
+            text('Languages: ')
+            doc.asis('<button class="btn add_text add_com" id="add_lang">Add</button>')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col levelfields', id='condenhan'):
+            text('Conditions & Enchantments: ')
+            doc.asis('<button class="btn add_text add_com" id="add_cond">Add</button>')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col levelfields', id='resist'):
+            text('Resistances: ')
+            doc.asis('<button class="btn add_text add_com" id="add_resist">Add</button>')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col levelfields', id='specs'):
+            text('Special Skills & Abilities: ')
+            doc.asis('<button class="btn add_text add_com" id="add_spec">Add</button>')
+  with tag('div', id='hidden', klass='pstats'):
+    with tag('div', klass = 'row'):
+      with tag('div', klass = 'col attrbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Ability Scores ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col str', id='str'):
+            text('Strength: ')
+            doc.asis('<input class="in create_p attr" id="pstr" placeholder="Strength">')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col dex', id='dex'):
+            text('Dexterity: ')
+            doc.asis('<input class="in create_p attr" id="pdex" placeholder="Dexterity">')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col const', id='const'):
+            text('Constitution: ')
+            doc.asis('<input class="in create_p attr" id="pconst" placeholder="Constitution">')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col intell', id='intell'):
+            text('Intelligence: ')
+            doc.asis('<input class="in create_p attr" id="pintell" placeholder="Intelligence">')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col wis', id='wis'):
+            text('Wisdom: ')
+            doc.asis('<input class="in create_p attr" id="pwis" placeholder="Wisdom">')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col char', id='char'):
+            text('Charisma: ')
+            doc.asis('<input class="in create_p attr" id="pchar" placeholder="Charisma">')
+      with tag('div', klass = 'col statbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Stats ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col hp', id='hp'):
+            text("Hit Points: ")
+            doc.asis('<input class="in create_p attr" id="php" placeholder="Hit Points">')
+  with tag('div', id='hidden', klass='pws'):
+    with tag('div', klass = 'row'):
+      with tag('div', klass = 'col wepbox', id='weps'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title', id='show_wep'):
+            text('~ Weapons ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col wepfields'):
             text('Weapon')
@@ -643,7 +652,9 @@ def get_sheet_form():
           # use element above to insert new weps
           with tag('div', klass = 'col wepfields title'):
             doc.asis('<button class="btn add_text add_table" id="add_wep">Add</button>')
-      with tag('div', id='hidden', klass='pspells'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title', id='show_wep'):
+            text('~ Spells ~')
         with tag('div', klass = 'row'):
           with tag('div', klass = 'col spellfields'):
             text('Level')
@@ -661,68 +672,69 @@ def get_sheet_form():
           # use element above to insert new spells
           with tag('div', klass = 'col spellfields title'):
               doc.asis('<button class="btn add_text add_table" id="add_spell">Add</button>')
-  with tag('div', klass = 'row'):
-    with tag('div', klass = 'col itembox'):
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col title'):
-          text('~ Items ~')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col itemfields'):
-          text('Name')
-        with tag('div', klass = 'col itemfields'):
-          text('Weight')
-        with tag('div', klass = 'col itemfields'):
-          text('Notes')
-      with tag('div', klass = 'row', id="item_but"):
-        # use element above to insert new items
-        with tag('div', klass = 'col itemfields title'):
-          doc.asis('<button class="btn add_text add_table" id="add_item">Add</button>')
-    with tag('div', klass = 'col treasbox'):
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col title'):
-          text('~ Treasures ~')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col'):
-          with tag('div', klass = 'row'):
-            with tag('div', klass = 'col treasfields', id='pp'):
-              text('PP: ')
-              doc.asis('<input class="in create_p attr" id="ppp" placeholder="PP">')
-          with tag('div', klass = 'row'):
-            with tag('div', klass = 'col treasfields', id='gp'):
-              text('GP: ')
-              doc.asis('<input class="in create_p attr" id="pgp" placeholder="GP">')
-          with tag('div', klass = 'row'):
-            with tag('div', klass = 'col treasfields', id='ep'):
-              text('EP: ')
-              doc.asis('<input class="in create_p attr" id="pep" placeholder="EP">')
-          with tag('div', klass = 'row'):
-            with tag('div', klass = 'col treasfields', id='sp'):
-              text('SP: ')
-              doc.asis('<input class="in create_p attr" id="psp" placeholder="SP">')
-          with tag('div', klass = 'row'):
-            with tag('div', klass = 'col treasfields', id='cp'):
-              text('CP: ')
-              doc.asis('<input class="in create_p attr" id="pcp" placeholder="CP">')
-        with tag('div', klass ='col', id='gems'):
-          with tag('div', klass = 'row'):
-            with tag('div', klass = 'col title'):
-              text('~ Gems ~')
-          with tag('div', klass = 'row', id="gem_but"):
-            # use element above to insert new gems
-            with tag('div', klass = 'col treasfields title'):
-              doc.asis('<button class="btn add_text new_gem" id="add_gem">Add</button>')
-  with tag('div', klass = 'row'):
-    with tag('div', klass = 'col condbox'):
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col title'):
-          text('~ Condition/Speed ~')
-      with tag('div', klass = 'row'):
-        with tag('div', klass = 'col condfields', id='base_speed'):
-          text("Base Speed: ")
-          doc.asis('<input class="in create_p attr" id="pbase" placeholder="Base Speed">')
-        with tag('div', klass = 'col condfields', id='curr_speed'):
-          text("Current Speed: ")
-          doc.asis('<input class="in create_p attr" id="pcurr" placeholder="Current Speed">')
+  with tag('div', id='hidden', klass='pitems'):
+    with tag('div', klass = 'row'):
+      with tag('div', klass = 'col itembox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Items ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col itemfields'):
+            text('Name')
+          with tag('div', klass = 'col itemfields'):
+            text('Weight')
+          with tag('div', klass = 'col itemfields'):
+            text('Notes')
+        with tag('div', klass = 'row', id="item_but"):
+          # use element above to insert new items
+          with tag('div', klass = 'col itemfields title'):
+            doc.asis('<button class="btn add_text add_table" id="add_item">Add</button>')
+      with tag('div', klass = 'col treasbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Treasures ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col'):
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields', id='pp'):
+                text('PP: ')
+                doc.asis('<input class="in create_p attr" id="ppp" placeholder="PP">')
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields', id='gp'):
+                text('GP: ')
+                doc.asis('<input class="in create_p attr" id="pgp" placeholder="GP">')
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields', id='ep'):
+                text('EP: ')
+                doc.asis('<input class="in create_p attr" id="pep" placeholder="EP">')
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields', id='sp'):
+                text('SP: ')
+                doc.asis('<input class="in create_p attr" id="psp" placeholder="SP">')
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col treasfields', id='cp'):
+                text('CP: ')
+                doc.asis('<input class="in create_p attr" id="pcp" placeholder="CP">')
+          with tag('div', klass ='col', id='gems'):
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col title'):
+                text('~ Gems ~')
+            with tag('div', klass = 'row', id="gem_but"):
+              # use element above to insert new gems
+              with tag('div', klass = 'col treasfields title'):
+                doc.asis('<button class="btn add_text new_gem" id="add_gem">Add</button>')
+    with tag('div', klass = 'row'):
+      with tag('div', klass = 'col condbox'):
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col title'):
+            text('~ Condition/Speed ~')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col condfields', id='base_speed'):
+            text("Base Speed: ")
+            doc.asis('<input class="in create_p attr" id="pbase" placeholder="Base Speed">')
+          with tag('div', klass = 'col condfields', id='curr_speed'):
+            text("Current Speed: ")
+            doc.asis('<input class="in create_p attr" id="pcurr" placeholder="Current Speed">')
   with tag('div', klass='row'):
     with tag('div', klass = 'col submitbox title'):
       doc.asis('<button class="btn but_sheet" id="sub_sheet">Create Sheet</button>')
@@ -734,7 +746,6 @@ def get_sheet_form():
 def get_player_stats(uname, isPlayer, room, raw_resp):
   # use passed in JSON to build HTML
   if isPlayer:
-    print('Im a player') # DEBUG
     doc, tag, text = Doc().tagtext()
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col title'):
@@ -805,7 +816,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
               doc.asis('<button class="btn add_text add_com" id="add_resist">Add</button>')
           with tag('div', klass = 'row'):
             with tag('div', klass = 'col levelfields', id='specs'):
-              if 'specs' in raw_resp.keys():
+              if 'special' in raw_resp.keys():
                 text('Special Skills & Abilities: ' + (', ').join(raw_resp['special']))
               else:
                 text('Special Skills & Abilities: ')

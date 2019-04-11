@@ -190,37 +190,40 @@ $(document).ready(function(){
           sheet.html(data.msg);       //display form
           var sheet_obj = {};         //save all newly added attributes for sending back to the server
           // ---BEGIN HANDLERS---
-          //handle if user clicks spells, need to switch to spell view
-          $('#show_spell').click(function() {
-            // set weapons to hidden, spells to shown, change "click" text to other
-            // IF Not already shown
-            if ($('.pspells').attr('id') == 'hidden') {
-              $('.pweps').attr('id', 'hidden');
-              $('.pspells').attr('id', 'shown');
-              $('#show_wep').append(' (click to view)');
-              let curr_html = $('#show_spell').html();
+
+          //handle player wanting to switch tabs of psheet
+          $('.showbox').click(function() {
+            //set clicked to shown (if not already) and all others to hidden
+            let but_id = this.id;      //which was clicked
+            let box_id = but_to_box[but_id];   //get one to show
+            // go thru and hide all other if not hidden
+            for (let box of Object.keys(box_to_but)) {
+              if (box === box_id) {
+                continue; //one to show, don't hide
+              }
+              if ($('.' + box).attr('id') == 'shown') {
+                //hide all other shown, mark as (click to view)
+                $('.' + box).attr('id', 'hidden');
+                let curr_but = box_to_but[box];
+                $('#' + curr_but).append(' (click to view)');
+              }
+            }
+            if ($('.' + box_id).attr('id') == 'hidden') {
+              //if not already shown, show the clicked box
+              $('.' + box_id).attr('id', 'shown');
+              let curr_html = $('#' + but_id).html();
+              // active window, remove (click to view)
               curr_html = curr_html.replace(' (click to view)', '');
-              $('#show_spell').html(curr_html);
+              $('#' + but_id).html(curr_html);
             }
           });
-          //handle if user clicks weps, need to switch to wep view
-          $('#show_wep').click(function() {
-            // set weapons to hidden, spells to shown, change "click" text to other
-            // IF not already shown
-            if ($('.pweps').attr('id') == 'hidden') {
-              $('.pspells').attr('id', 'hidden');
-              $('.pweps').attr('id', 'shown');
-              $('#show_spell').append(' (click to view)');
-              let curr_html = $('#show_wep').html();
-              curr_html = curr_html.replace(' (click to view)', '');
-              $('#show_wep').html(curr_html);
-            }
-          });
+
           //handle if user wants to add text in comma sep vals
           $('.btn.add_text.add_com').click(function() {
             let rv = add_comma_val(this.id, sheet_obj);
             if (typeof rv !== 'undefined') {
               sheet_obj = rv;
+              console.log(sheet_obj); // DEBUG
             }
           });
           //handle if user wants to add gem
@@ -1046,7 +1049,6 @@ $(document).ready(function(){
         }
         $('#' + in_id)[0].setCustomValidity("");
         $('#' + in_id).val(''); //clear
-        submit = true;
         //closest div up in hierarchy will be where to add text
         let parent = $('#' + in_id).closest('div');
         //remove unneeded fields
