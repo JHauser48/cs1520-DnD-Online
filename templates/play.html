@@ -36,7 +36,7 @@
 						</div>
 						<input id="text" size="118" placeholder="Enter message...">
 					</div>
-                    
+
 					 <div class="roll">
 							<div class = "roll_type">
 								<div class="rbtn">
@@ -48,10 +48,15 @@
 								<div class="rbtn">
 									<input type="radio" name = "roll_type" id ="disadv"><label>Disadvantage</label>
 								</div>
-                               
+
 							</div>
-                            
-                            <label>Dice Roll: click die to add to roll queue
+
+                            <label>Dice Roll: <span id="nd4">0</span>d4
+                                              <span id="nd6">0</span>d6
+                                              <span id="nd8">0</span>d8
+                                              <span id="nd10">0</span>d10
+                                              <span id="nd12">0</span>d12
+                                              <span id="nd20">0</span>d20
                             <div class="btn-group">
                                 <button id="d4">d4</button>
                                 <button id="d6">d6</button>
@@ -70,9 +75,10 @@
 								<option value="char">Charisma</option>
 							</select></label></div>
 							<button class = "btn" id ="dice_roll">Roll</button>
+              <button class = "btn" id ="clear_roll">Clear</button>
                             <button class = "btn3" id = "stat_btn">Change Attributes</button>
 					</div>
-                
+
 					<div class="modal" id="stat_change">
 						{% if isPlayer %}
 						<div class="col" id="psheetchange">

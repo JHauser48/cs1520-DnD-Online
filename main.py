@@ -33,7 +33,7 @@ sockets = Sockets(app)             # create socket listener
 u_to_client = {}                  # map users to Client object
 r_to_client = {}                # map room to list of Clients connected`(uses Object from gevent API)
 r_to_dm = {}     # maps room to boolean marking True if room already has DM, false if no DM
-r_u_char = {}    # for each room, maps username to character name 
+r_u_char = {}    # for each room, maps username to character name
 single_events = ['get_sheet', 'get_blank', 'load_sheets'] # track events where should only be sent to sender of event, i.e. not broadcast
 user_acc = ''
 user_token = ''
@@ -116,7 +116,7 @@ def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room, isPlayer):
   rolls = roll_all(dice_list)
   if isPlayer:
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
-      # display alias if character has taken name 
+      # display alias if character has taken name
       alias = r_u_char[room][uname]
       msg = alias + ' (' + uname + ') rolled:' + mod_msg + '</br>'
     else:
@@ -124,14 +124,17 @@ def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room, isPlayer):
   else:
     msg = 'Dungeon Master (' + uname + ') rolled:' + mod_msg + '</br>'
   msg += rolls[0]
-  print(rolls[0])
+  msg += 'For a total of: ' + str(rolls[1]) + '</br>'
+  total = rolls[1]
   if (adv != dis):
     #if distinct values, means rolled 2 dice
     rolls2 = roll_all(dice_list)
     msg += 'and ' + ('(with advantage)</br>' if adv else '(with disadvantage) </br>') + rolls2[0]
+    msg += 'For a total of: ' + str(rolls2[1]) + '</br>'
     msg += 'Use the ' + ('FIRST ' if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else 'SECOND ')
     msg += ' set of rolls'
-  return msg
+    total = (rolls[1] if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else rolls2[1])
+  return msg, total
 
 def roll_all(dice_list):
   roll_i = 0
@@ -192,17 +195,18 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     # person has joined room, must take difference of new clients list and old
     # use to track person in room
     add_client(clients, room, uname, ip, port)
+    # we arent going to display the join room response until they open a sheet of some kind (renamed: status -> join_room_msg)
     if isPlayer:
-      resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'status',
+      resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'joined',
       'weight': 'normal'}
     else:
-       resp = {'msg': uname + ' has entered as Dungeon Master!', 'color': 'red', 'type': 'status',
+       resp = {'msg': uname + ' has entered as Dungeon Master!', 'color': 'red', 'type': 'joined',
       'weight': 'normal'}
   elif req_type == 'text':
     # someone is sending a message
     if isPlayer:
       if room in r_u_char.keys() and uname in r_u_char[room].keys():
-        # display alias if character has taken name 
+        # display alias if character has taken name
         alias = r_u_char[room][uname]
         resp = {'msg': alias + ' (' + uname + '): ' + req['msg'], 'color': 'blue', 'type': 'chat',
         'weight': 'normal'}
@@ -214,11 +218,11 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       'weight': 'bold'}
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
-    msg = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname, room, isPlayer)
+    msg, total = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname, room, isPlayer)
     if isPlayer:
-      resp = {'msg': msg, 'color':'green', 'weight': 'bold', 'type': 'roll'}
+      resp = {'msg': msg, 'color':'green', 'weight': 'bold', 'type': 'roll', 'total': total}
     else:
-      resp = {'msg': msg, 'color':'purple', 'weight': 'bold', 'type': 'roll'}
+      resp = {'msg': msg, 'color':'purple', 'weight': 'bold', 'type': 'roll', 'total': total}
   elif req_type == 'leave':
     # someone leaving the room, remove from room client list to avoid issues, print status
     # also need to update sheet for leaving user, key = UID + title, IF NOT EMPTY
@@ -236,7 +240,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       if room in r_to_dm.keys():
         r_to_dm[room] = False
       resp = {'msg': 'The Dungeon Master (' + uname + ') has left the battle.', 'color': 'red', 'type': 'status',
-      'weight': 'bold'}
+      'weight': 'bold', 'uname': uname}
     else:
       # if player, remove aliased character name
       curr_name = req['msg']['name'] # remove name from list
@@ -245,9 +249,9 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
         r_u_char[room].pop(uname)
         # display with char name if has one, otherwise don't
         resp = {'msg': uname + ' (' + curr_name + ')  has left the battle.', 'color': 'red', 'type': 'status',
-        'weight': 'normal'}
-      else:
-        resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status', 'weight': 'normal'}
+        'weight': 'normal', 'uname': uname}
+      else:#why do we have this
+        resp = {'msg': uname + ' has left the battle.', 'color': 'red', 'type': 'status', 'weight': 'normal', 'uname': uname}
   elif req_type == 'get_sheet':
     # client asking for psheet OR DM info, depending on type, send requested info
     # include both formatted HTML and raw JSON
@@ -258,21 +262,25 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       uid = session['u_token']
       title = req['title']
       char_name = ''
+      #update client list
+      if room not in r_u_char.keys():
+        r_u_char[room] = {}
+      if uname not in r_u_char[room].keys():
+        r_u_char[room][uname] = ''
+
       # find requested sheet in DB
       if isPlayer:
         found_raw = mongo.db['psheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
-        if room not in r_u_char.keys():
-          r_u_char[room] = {}
-        if uname not in r_u_char[room].keys():
-          r_u_char[room][uname] = ''
         char_name = found_raw['name']
         r_u_char[room][uname] = char_name   # store character name
         jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
-        resp = {'msg': data, 'raw': found_raw, 'type': 'sheet', 'l2x': level_to_xp}
+        resp = {'msg': data, 'raw': found_raw, 'type': 'sheet', 'l2x': level_to_xp, 'clients': r_u_char[room]}
       else:
         found_raw = mongo.db['dmsheets'].find_one({"$and":[{'uid': uid}, {'sheet_title': title}]})
+        char_name = 'DM'
+        r_u_char[room][uname] = char_name
         jsonstr, data = get_player_stats(uname, isPlayer, room, found_raw) # build HTML
-        resp = {'msg': data, 'raw': found_raw, 'type': 'dmstuff'}
+        resp = {'msg': data, 'raw': found_raw, 'clients': r_u_char[room], 'type': 'dmstuff'}
     else:
       # raw JSON of sheet sent in message, store in db using UID as key
       raw_sheet = req['msg']
@@ -296,10 +304,10 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     # create broadcast message for room status
     if isPlayer:
       join_resp = {'msg': uname + ' has joined the game as ' + char_name + '.', 'color': 'chocolate', 'type': 'status',
-      'weight': 'normal'}
+      'weight': 'normal', 'uname': uname, 'cname': char_name}
     else:
-      join_resp = {'msg': uname + ' has joined the game as Dungeon Master.', 'color': 'chocolate', 'type': 'status', 
-      'weight': 'bold'}
+      join_resp = {'msg': uname + ' has joined the game as Dungeon Master.', 'color': 'chocolate', 'type': 'status',
+      'weight': 'bold', 'uname': uname, 'cname': 'DM'}
   elif req_type == 'change_attr':
     # someone changed a numeric attribute
     direction = 'increased' if req['dir'] else 'decreased'
@@ -307,7 +315,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     # keep same if not shortened version (should only be gems)
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
-      # display alias if character has taken name 
+      # display alias if character has taken name
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has ' + direction + ' their ' + attr + ' by ' +
       str(req['change']) + ' to ' + str(req['amt']) + '.' + lvl_up, 'color': 'chocolate', 'type': 'chat',
@@ -320,7 +328,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     # someone has added to textual attribute
     attr = mod_stats[(req['attr'])] if req['attr'] in mod_stats.keys() else req['attr']
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
-      # display alias if character has taken name 
+      # display alias if character has taken name
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['change']) + ' to their ' + attr + '.',
       'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
@@ -330,7 +338,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
   elif req_type == 'add_gem':
     # someone has added new gems
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
-      # display alias if character has taken name 
+      # display alias if character has taken name
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['change']) + ' ' + str(req['attr']) +
       ' to their inventory.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
@@ -340,7 +348,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
   elif req_type == 'add_item':
     # someone added either weapon, item, or spell
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
-      # display alias if character has taken name 
+      # display alias if character has taken name
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has added ' + str(req['name']) + ' to their ' + str(req['it_type']) +
       '.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
@@ -350,7 +358,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
   elif req_type == 'change_cond':
     # someone has changed their condition
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
-      # display alias if character has taken name 
+      # display alias if character has taken name
       alias = r_u_char[room][uname]
       resp = {'msg': alias + ' (' + uname + ') has changed their condition from ' + str(req['last']) + ' to ' + str(req['change']) +
       '.', 'color': 'chocolate', 'type': 'status', 'weight': 'normal'}
@@ -1036,22 +1044,20 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                 text("Current Condition: " + raw_resp['condition'])
               doc.asis('<button class="btn add_text change" id="change_cond">Change</button>')
 
-  else:
-    #fake response and probably wont have the same parameters as a real one
-
+  else:#DM STUFF HERE
     # use dict to build HTML using library
     doc, tag, text = Doc().tagtext()
-    with tag('div', klass = 'row'):
+    with tag('div', klass = 'row', id = 'dm-title-row'):
       with tag('div', klass = 'col title'):
         text(' ~ DM Sheet ~ ')
-    with tag('div', klass = 'row'):
+    with tag('div', klass = 'row', id = 'dm-button-row'):
       with tag('div', klass = 'col dmbutton', id='encounter'):
         text('Encounter')
       with tag('div', klass = 'col dmbutton', id='monster'):
         text('Monsters')
       with tag('div', klass = 'col dmbutton', id='notes'):
         text('Notes')
-    with tag('div', klass = 'row dmcontent'):
+    with tag('div', klass = 'row', id = 'dmcontent'):
       with tag('div', klass = 'col dmnotes', id='shown'):
         with tag('div', klass='row row-no-gutters'):
           with tag('div', klass = 'col col-md-12'):
@@ -1071,13 +1077,12 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                   with tag('div', klass='col'):
                     text('Monster List')
                 with tag('div', klass='row'):
-                  with tag('div', klass='col no-border', id='mmonsterlist'):
-                    for monster, monsterinfo in raw_resp['monsters'].items():
-                      with tag('div', klass = 'col'):
-                        text(monster)
-                        #dont need this now that we are storing the raw_sheet in js
-                        #with tag('div', klass='json'+monster['type'] ,id='hidden'):
-                          #text(str(monster))
+                  with tag('div', klass='col no-border', id='monsterListBox'):
+                    with tag('div', id='monsterListContent'):
+                      with tag('div', id='mmonsterlist'):
+                        for monster, monsterinfo in raw_resp['monsters'].items():
+                          with tag('div', klass = 'col'):
+                            text(monster)
           with tag('div', klass = 'col no-border col-md-8 dmmonsteredit'):
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col col-md-7', id = 'monstername'):
@@ -1126,45 +1131,45 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-str'):
                         text('Str: ')
-                        doc.asis('<input type="text" name="str" class="newMonsterTextField" placeholder="Strength Stat" value="">')
+                        doc.asis('<input type="text" name="as-str" class="newMonsterTextField" placeholder="Strength Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-str-mod'):
                         text('Mod: ')
-                        doc.asis('<input type="text" name="str-mod" class="newMonsterTextField" placeholder="Strength Modifier" value="" readonly>')
+                        doc.asis('<input type="text" name="as-str-mod" class="newMonsterTextField" placeholder="Strength Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-dex'):
                         text('Dex: ')
-                        doc.asis('<input type="text" name="dex" class="newMonsterTextField" placeholder="Dexterity Stat" value="">')
+                        doc.asis('<input type="text" name="as-dex" class="newMonsterTextField" placeholder="Dexterity Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-dex-mod'):
                         text('Mod: ')
-                        doc.asis('<input type="text" name="dex-mod" class="newMonsterTextField" placeholder="Dexterity Modifier" value="" readonly>')
+                        doc.asis('<input type="text" name="as-dex-mod" class="newMonsterTextField" placeholder="Dexterity Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-const'):
                         text('Con: ')
-                        doc.asis('<input type="text" name="const" class="newMonsterTextField" placeholder="Constitution Stat" value="">')
+                        doc.asis('<input type="text" name="as-const" class="newMonsterTextField" placeholder="Constitution Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-const-mod'):
                         text('Mod: ')
-                        doc.asis('<input type="text" name="const-mod" class="newMonsterTextField" placeholder="Constitution Modifier" value="" readonly>')
+                        doc.asis('<input type="text" name="as-const-mod" class="newMonsterTextField" placeholder="Constitution Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-intell'):
                         text('Int: ')
-                        doc.asis('<input type="text" name="intell" class="newMonsterTextField" placeholder="Intelligence Stat" value="">')
+                        doc.asis('<input type="text" name="as-intell" class="newMonsterTextField" placeholder="Intelligence Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-intell-mod'):
                         text('Mod: ')
-                        doc.asis('<input type="text" name="intell-mod" class="newMonsterTextField" placeholder="Intelligence Modifier" value="" readonly>')
+                        doc.asis('<input type="text" name="as-intell-mod" class="newMonsterTextField" placeholder="Intelligence Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-wis'):
                         text('Wis: ')
-                        doc.asis('<input type="text" name="wis" class="newMonsterTextField" placeholder="Wisdom Stat" value="">')
+                        doc.asis('<input type="text" name="as-wis" class="newMonsterTextField" placeholder="Wisdom Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-wis-mod'):
                         text('Mod: ')
-                        doc.asis('<input type="text" name="wis-mod" class="newMonsterTextField" placeholder="Wisdom Modifier" value="" readonly>')
+                        doc.asis('<input type="text" name="as-wis-mod" class="newMonsterTextField" placeholder="Wisdom Modifier" value="" readonly>')
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-8', id = 'ability-scores-char'):
                         text('Cha: ')
-                        doc.asis('<input type="text" name="char" class="newMonsterTextField" placeholder="Charisma Stat" value="">')
+                        doc.asis('<input type="text" name="as-char" class="newMonsterTextField" placeholder="Charisma Stat" value="">')
                       with tag('div', klass = 'col col-md-4', id = 'ability-scores-char-mod'):
                         text('Mod: ')
-                        doc.asis('<input type="text" name="char-mod" class="newMonsterTextField" placeholder="Charisma Modifier" value="" readonly>')
+                        doc.asis('<input type="text" name="as-char-mod" class="newMonsterTextField" placeholder="Charisma Modifier" value="" readonly>')
                   with tag('div', klass = 'col tswin', id = 'hidden'):
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col col-md-4', id='throws'):
@@ -1254,7 +1259,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     with tag('div', klass = 'row'):
                       with tag('div', klass = 'col no-border', id='traitList'):
                         text('Traits:')
-                    with tag('div', klass = 'row', id='newSenseRow'):
+                    with tag('div', klass = 'row', id='newTraitRow'):
                       with tag('div', klass = 'col col-md-6', id='traitName'):
                         text('Trait: ')
                         doc.asis('<input type="text" name="newTraitName" class="newMonsterTextField" placeholder="Trait" value="">')
@@ -1279,10 +1284,74 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                 with tag('div', klass = 'row row-no-gutters arlSec', style='display: none'):
                   with tag('div', klass = 'col actionswin', id = 'shown'):
                     text('Actions')
+                    with tag('div', klass = 'row', id='newActionRow'):
+                      with tag('div', klass = 'col no-border'):
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col col-md-8', id='actionName'):
+                            text('New Action: ')
+                            doc.asis('<input type="text" name="newActionName" class="newMonsterTextField" placeholder="Action" value="">')
+                          with tag('div', klass = 'col col-md-4', id='actionType'):
+                            text('Action Type: ')
+                            doc.asis("""<select class='newMonsterTextField' id='newActionType'>
+                                          <option value='' selected disabled hidden>Type</option>
+                                          <option value='weapon'>Weapon</option>
+                                          <option value='spell'>Spell</option>
+                                          <option value='saving'>Saving</option>
+                                          <option value='other'>Other</option>
+                                        </select>""")
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id='newWeaponAction'):
+                            text('new weapon attack stuff')
+                          with tag('div', klass = 'col', id='newSpellAction'):
+                            text('new spell attack stuff')
+                          with tag('div', klass = 'col', id='newSavingAction'):
+                            text('new saving attack stuff')
+                          with tag('div', klass = 'col', id='newOtherAction'):
+                            text('new other sttack stuff')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id = 'addAction'):
+                            text('Add Action')
                   with tag('div', klass = 'col reactionwin', id = 'hidden'):
                     text('Reactions')
+                    with tag('div', klass = 'row', id='newReactionRow'):
+                      with tag('div', klass = 'col col-md-6', id='reactName'):
+                        text('Reaction: ')
+                        doc.asis('<input type="text" name="newReactName" class="newMonsterTextField" placeholder="Reaction" value="">')
+                      with tag('div', klass = 'col col-md-6', id='traitDesc'):
+                        text('Desc: ')
+                        doc.asis('<textarea name="newReactDesc" class="newMonsterTextArea" placeholder="Description of reaction..."></textarea>')
+                    with tag('div', klass = 'row'):
+                      with tag('div', klass = 'col', id='addReact'):
+                        text('Add React')
                   with tag('div', klass = 'col legendwin', id = 'hidden'):
                     text('Legendary Actions')
+                    with tag('div', klass = 'row', id='newActionRow'):
+                      with tag('div', klass = 'col no-border'):
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col col-md-8', id='lactionName'):
+                            text('New Legendary Action: ')
+                            doc.asis('<input type="text" name="newLActionName" class="newMonsterTextField" placeholder="Legendary Action" value="">')
+                          with tag('div', klass = 'col col-md-4', id='lactionType'):
+                            text('Action Type: ')
+                            doc.asis("""<select class='newMonsterTextField' id='newLActionType'>
+                                          <option value='' selected disabled hidden>Type</option>
+                                          <option value='weapon'>Weapon</option>
+                                          <option value='spell'>Spell</option>
+                                          <option value='saving'>Saving</option>
+                                          <option value='other'>Other</option>
+                                        </select>""")
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id='newWeaponLAction'):
+                            text('new legendary weapon attack stuff')
+                          with tag('div', klass = 'col', id='newSpellLAction'):
+                            text('new legendary spell attack stuff')
+                          with tag('div', klass = 'col', id='newSavingLAction'):
+                            text('new legendary saving attack stuff')
+                          with tag('div', klass = 'col', id='newOtherLAction'):
+                            text('new legendary other sttack stuff')
+                        with tag('div', klass = 'row'):
+                          with tag('div', klass = 'col', id = 'addLAction'):
+                            text('Add Legendary Action')
         #resistances immunities and vulnerabilities
             with tag('div', klass = 'row row-no-gutters'):
               with tag('div', klass = 'col'):
@@ -1331,23 +1400,24 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         text('Add Vulnerability')
       #end dm edit
       with tag('div', klass = 'col dmencounter', id='hidden'):
-        with tag('div', klass = 'col col-xs-4 col-sm-4 col-md-4 dmmonsterlist'):
-          with tag('div', klass='row'):
-            with tag('div', klass='col'):
-              text('Monster List')
-          with tag('div', klass='row'):
-            with tag('div', klass='col', id='emonsterlist'):
-              for monster, monsterinfo in raw_resp['monsters'].items():
-                with tag('div', klass = 'col'):
-                  text(monster)
-                  #dont need this now that we are storing the raw_sheet in js
-                  #with tag('div', klass='json'+monster['type'] ,id='hidden'):
-                    #text(str(monster))
-        with tag('div', klass = 'col-xs-8 col-sm-8 col-md-8 dmencountercontent'):
-          with tag('div', klass = 'col dmturnorder'):
-            text('turn order stuff here')
-          with tag('div', klass = 'col', id='dmmonsterinfo'):
-            text('specific enemy info here')
+        with tag('div', klass = 'row'):
+          with tag('div', klass = 'col col-xs-4 col-sm-4 col-md-4 dmmonsterlist'):
+            with tag('div', klass='row'):
+              with tag('div', klass='col'):
+                text('Monster List')
+            with tag('div', klass='row'):
+              with tag('div', klass='col no-border', id='monsterListBox'):
+                with tag('div', id='monsterListContent'):
+                  with tag('div', id='emonsterlist'):
+                    for monster, monsterinfo in raw_resp['monsters'].items():
+                      with tag('div', klass = 'col'):
+                        text(monster)
+          with tag('div', klass = 'col-xs-8 col-sm-8 col-md-8 no-border dmencountercontent'):
+            with tag('div', klass = 'row'):
+              with tag('div', klass = 'col dmturnorder'):
+                text('turn order stuff here')
+              with tag('div', klass = 'col', id='dmmonsterinfo'):
+                text('specific enemy info here')
 
   resp = doc.getvalue()
   print('returning from get_stats')

@@ -2,7 +2,7 @@ var socket;
 var uname;
 var roomname;
 var isPlayer;
-var dice_data = [0, 0, 0, 0, 0, 0]; // d4, d6, d10, d12, d20
+var dice_data = [0, 0, 0, 0, 0, 0]; // d4, d6, d8, d10, d12, d20
 
 console.log("before doc");
 $(document).ready(function(){
@@ -23,11 +23,13 @@ $(document).ready(function(){
     var cond_list = ['Normal', 'Blinded', 'Charmed', 'Deafened', 'Fatigued', 'Frightened', 'Grappled',
     'Incapacitated', 'Invisible', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained',
     'Stunned', 'Unconscious'];  //list of all possible conditions, use for list
-    var box_to_but = {'pinfo': 'show_info', 'pstats': 'show_stats', 'pws': 'show_ws', 
-    'pitems': 'show_items'}; 
+    var box_to_but = {'pinfo': 'show_info', 'pstats': 'show_stats', 'pws': 'show_ws',
+    'pitems': 'show_items'};
     //all possible boxes to buts, use for tabs
-    var but_to_box = {'show_info': 'pinfo', 'show_stats': 'pstats', 'show_ws': 'pws', 
+    var but_to_box = {'show_info': 'pinfo', 'show_stats': 'pstats', 'show_ws': 'pws',
     'show_items': 'pitems'};      //map buttons to corresponding boxes
+
+    var clients = {};
 
     //DM variables
     var newMonsterEdit = { //new monster info that gets input into the html
@@ -45,6 +47,16 @@ $(document).ready(function(){
     var currentMonsterEdit; //the monster that is currently being edited
     var currentMonsterTurn; //the monster whose turn it is
 
+    //resize stuff
+    var sheetSize = 0.9; //this is a percent
+    $('#chatbox').height($(window).height() / 2);
+    $('#chatlog').css('max-height', $('#chatbox').height());
+    sheet.height($(window).height() * sheetSize);
+    $(window).resize(function(){
+      $('#chatbox').height($(window).height() / 2);
+      $('#chatlog').css('max-height', $('#chatbox').height());
+      sheet.height($(window).height() * sheetSize);
+    });
     // begin event handlers for socket
     //when new connection opened, should send type: enter
     socket.onopen = function(){
@@ -58,9 +70,18 @@ $(document).ready(function(){
     socket.onmessage = function(msg){
       data = JSON.parse(msg.data); //convert to JS object
       switch (data.type) {
+        case 'joined':
+          //do nothing
+          break;
         case 'status':
           $('#chatlog').append('<p style=\'color:' + data.color + ';' + 'font-weight:' + data.weight +'\'>&lt;' + data.msg + '&gt;</p>');
           $('#chatlog').scrollTop($('#chatlog')[0].scrollHeight);
+          if(data.hasOwnProperty('uname') && data.hasOwnProperty('cname')){//joining
+            clients[data.uname] = data.cname;
+          }
+          else if(data.hasOwnProperty('uname') && !data.hasOwnProperty('cname')){//leaving
+            delete clients[data.uname];
+          }
           break;
         case 'chat':
           $('#chatlog').append('<p style=\'color:' + data.color + ';' + 'font-weight:' + data.weight +'\'>' + data.msg + '</p>');
@@ -77,6 +98,8 @@ $(document).ready(function(){
           sheet.html(data.msg);   // add sheet to HTML
           raw_sheet = data.raw;   //store JSON
           l2x = data.l2x; //save level xp info
+          clients = data.clients; //store clients
+          console.log(clients);
           //add current gems into options for changing
           let gem_html = "";
           if (raw_sheet.treasures.hasOwnProperty('gems')) {
@@ -88,7 +111,7 @@ $(document).ready(function(){
           }
 
           // --- BEGIN HANDLERS FOR PSHEET ELEMENTS ---
-          
+
           //handle player wanting to switch tabs of psheet
           $('.showbox').click(function() {
             //set clicked to shown (if not already) and all others to hidden
@@ -368,12 +391,28 @@ $(document).ready(function(){
         case 'dmstuff':
           //server has sent the dm sheet
           $('.btn.but_sheet').remove();       //remove load/create buttons on sheet load
-          sheet.css('display', 'inline-block');    //unhide sheet]
+          sheet.css('display', 'inline-block');    //unhide sheet
           sheet.html(data.msg);   //add sheet to HTML
           raw_sheet = data.raw; //store JSON
+          clients = data.clients; //store list of connected clients
+          console.log(clients);
+          //resizing STUFF
+          $('#dmcontent').css('max-height', sheet.height() - $('#dm-title-row').height() - $('#dm-button-row').height());
+          //should override the original window.resize
+          $(window).resize(function(){
+            $('#chatbox').height($(window).height() / 2);
+            $('#chatlog').css('max-height', $('#chatbox').height());
+            sheet.height($(window).height() * sheetSize);
+            $('#dmcontent').css('max-height', sheet.height() - $('#dm-title-row').height() - $('#dm-button-row').height());
+          });
+
+          //dm notes event listener
           $('#dmtextarea').change(function(){
             raw_sheet['notes'] = $('#dmtextarea').val();
           });
+          //adjust size of textarea
+          $('#dmtextarea').width($('#dmnotes').width());
+
           //get all the content divs for easy access later
           arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];//dm sheet div button
           //need to be defined here so we know the dm sheet has been loaded
@@ -537,7 +576,7 @@ $(document).ready(function(){
 
           //attaches a change event to all new monster text fields so we can tell when a monster needs to be Saved
           var addInputChangeEvent = function(){//}
-            $('input:not([name^="new"])').change(()=>{
+            $('input:not([name^="new"], [name^="as-"])').change(()=>{
               $('#div-' + $('input[name=name]').val() + '-btn').css('color', 'red');
             });
           }
@@ -545,21 +584,55 @@ $(document).ready(function(){
           //ability score change event listener
           //automatically updates the ability scores' mod value
           //this doesn't work cause of adding the same listener multiple times
-          //$('[id^="ability-scores-"]').filter(':even').each(()=>{$(this).find('input').change(()=>{
-          //    $('input[name=' + $(this).attr('name') + '-mod]').val(getASModifier($(this).val()));
-          //});});
+          $('input[name^="as-"]').change(function(){
+            $('#div-' + $('input[name=name]').val() + '-btn').css('color', 'red');
+            $('input[name=' + $(this).attr('name') + '-mod]').val(getASModifier($(this).val()));
+          });
 
           //if one of the add buttons is clicked then also say we need to save the monster
           $('div[id^="add"]').click(()=>{
             $('#div-' + $('input[name=name]').val() + '-btn').css('color', 'red');
           });
 
-          //ability score change event listener
-          //automatically updates the ability scores' mod value
-          //this doesn't work cause of adding the same listener multiple times
-          $('[id^="ability-scores-"]').filter(':even').each(()=>{$(this).find('input').change(()=>{
-              $('input[name=' + $(this).attr('name') + '-mod]').val(getASModifier($(this).val()));
-          });});
+          //action events stuffff
+          //by default set everything to hidden
+          $('#newWeaponAction').css('display', 'none');
+          $('#newSpellAction').css('display', 'none');
+          $('#newSavingAction').css('display', 'none');
+          $('#newOtherAction').css('display', 'none');
+          //save previous option
+          var prevaction;
+          $('#newActionType').on('focus', function(){
+            prevaction = $(this).val() ? $(this).val() : "";
+          }).change(function(){
+            //console.log('prev: ' + prev);
+            val = $(this).val();
+            //console.log(val);
+            //console.log('#new' + val.charAt(0).toUpperCase() + val.substring(1) + 'Action');
+            $('#new' + val.charAt(0).toUpperCase() + val.substring(1) + 'Action').css('display', 'inline-block');
+            if(prevaction != '') $('#new' + prevaction.charAt(0).toUpperCase() + prevaction.substring(1) + 'Action').css('display', 'none');
+            prevaction = val;
+          });
+
+          //legendary action events stuff
+          //by default set everything to hidden
+          $('#newWeaponLAction').css('display', 'none');
+          $('#newSpellLAction').css('display', 'none');
+          $('#newSavingLAction').css('display', 'none');
+          $('#newOtherLAction').css('display', 'none');
+          //save previous option
+          var prevlaction;
+          $('#newLActionType').on('focus', function(){
+            prevlaction = $(this).val() ? $(this).val() : "";
+          }).change(function(){
+            //console.log('prev: ' + prev);
+            val = $(this).val();
+            //console.log(val);
+            //console.log('#new' + val.charAt(0).toUpperCase() + val.substring(1) + 'Action');
+            $('#new' + val.charAt(0).toUpperCase() + val.substring(1) + 'LAction').css('display', 'inline-block');
+            if(prevlaction != '') $('#new' + prevlaction.charAt(0).toUpperCase() + prevlaction.substring(1) + 'LAction').css('display', 'none');
+            prevlaction = val;
+          });
 
           //calculates the modifier for a given ability scores
           //this is probably a duplicate function but oh well
@@ -593,8 +666,8 @@ $(document).ready(function(){
             //console.log(currentMonsterEdit);
             //ability scores
             for(ability in currentMonsterEdit.ability_scores){
-              $('input[name=' + ability + ']').val(currentMonsterEdit.ability_scores[ability]);
-              $('input[name=' + ability + '-mod]').val(getASModifier(currentMonsterEdit.ability_scores[ability]));
+              $('input[name=as-' + ability + ']').val(currentMonsterEdit.ability_scores[ability]);
+              $('input[name=as-' + ability + '-mod]').val(getASModifier(currentMonsterEdit.ability_scores[ability]));
             }
             //saving Throws
             for(sthrow in currentMonsterEdit.saving_throws){
@@ -718,7 +791,13 @@ $(document).ready(function(){
           }
           //loads a new monster by default
           loadMonsterEdit('');
-          $('#newmonsterbtn').click(()=>{loadMonsterEdit('');});
+          $('#newmonsterbtn').click(()=>{
+            //set button css to default
+            monsterName = $('input[name=name]').val();
+            $('#div-' + monsterName + '-btn').css('color', '');
+            $('#monstername').css('color', '');
+            loadMonsterEdit('');
+          });
 
           $('#addSkill').click(function(){
             skName = $('input[name=newSkillName]').val();
@@ -883,7 +962,7 @@ $(document).ready(function(){
                 case 'ability_scores':
                   for(as in monsterToSave['ability_scores']){
                     //console.log(as + ' >> ' + $('input[name=' + as + ']').val());
-                    monsterToSave['ability_scores'][as] = $('input[name=' + as + ']').val();
+                    monsterToSave['ability_scores'][as] = $('input[name=as-' + as + ']').val();
                   }
                   break;
                 case 'saving_throws':
@@ -977,9 +1056,12 @@ $(document).ready(function(){
             //did monster exist
             if(!raw_sheet['monsters'].hasOwnProperty(monsterName)){//if monster already exists we were just updating it so don't add a new div
               //add new div button for the monster to each monster list element
-              var newdiv = $('<div class=\'col\' id=\'div-'+monsterName+'-btn\'>' + monsterName + '</div>');
-              newdiv.click(()=>{loadMonsterEdit(monsterName);});
-              $('#mmonsterlist').append(newdiv);
+              var newEditDiv = $('<div class=\'col\' id=\'div-'+monsterName+'-btn\'>' + monsterName + '</div>');
+              newEditDiv.click(()=>{loadMonsterEdit(monsterName);});
+              $('#mmonsterlist').append(newEditDiv);
+              var newEncDiv = $('<div class=\'col\' id=\'div-'+monsterName+'-btn\'>' + monsterName + '</div>');
+              newEncDiv.click(()=>{addMonsterToEncounter(monsterName);});
+              $('#emonsterlist').append(newEncDiv);
             }
             //add new monster to the raw json
             raw_sheet['monsters'][monsterName] = monsterToSave;
@@ -996,11 +1078,15 @@ $(document).ready(function(){
           $('#emonsterlist').children('div').each(function(){
             //the next div is the one with the json in it
             //var monsterjson = JSON.parse($(this).children().html());
-            $(this).click(function(){
-              //console.log($(this).html());
-              $('#dmmonsterinfo').html($(this).html());
-            });
+            $(this).click(()=>{addMonsterToEncounter($(this).html())});
+            $(this).attr('id', 'div-' + $(this).html() + '-btn');
           });
+
+          //ENCOUNTER PAGE FUNCTIONS
+          var addMonsterToEncounter = function(monsterName)
+          {
+            console.log(monsterName);
+          }
           break;
       }
     }
@@ -1009,9 +1095,9 @@ $(document).ready(function(){
 
     function openStatChange() {
         if(document.getElementById("stat_change").style.display == "block"){
-             document.getElementById("stat_change").style.display = "none";     
+             document.getElementById("stat_change").style.display = "none";
         }else{
-          document.getElementById("stat_change").style.display = "block";   
+          document.getElementById("stat_change").style.display = "block";
         }
     }
 
@@ -1506,31 +1592,53 @@ $(document).ready(function(){
       // create string from type appended with dice info
       let msg = JSON.stringify({type: 'dice_roll', dice_list: dice_data, modifier: mod, modifier_value: mod_val, adv: adv, disadv: disadv});
       socket.send(msg);
-      dice_data = [0, 0, 0, 0, 0, 0]
+      dice_data = [0, 0, 0, 0, 0, 0];
+      $('#nd4').html(0);
+      $('#nd6').html(0);
+      $('#nd8').html(0);
+      $('#nd10').html(0);
+      $('#nd12').html(0);
+      $('#nd20').html(0);
+    });
+
+    $('#clear_roll').click(function(){
+      dice_data = [0, 0, 0, 0, 0, 0];
+      $('#nd4').html(0);
+      $('#nd6').html(0);
+      $('#nd8').html(0);
+      $('#nd10').html(0);
+      $('#nd12').html(0);
+      $('#nd20').html(0);
     });
 
     $('#d4').click(function(){
         dice_data[0] += 1;
+        $('#nd4').html(dice_data[0]);
     });
 
     $('#d6').click(function(){
        dice_data[1] += 1;
+       $('#nd6').html(dice_data[1]);
     });
 
     $('#d8').click(function(){
         dice_data[2] += 1;
+        $('#nd8').html(dice_data[2]);
     });
 
     $('#d10').click(function(){
         dice_data[3] += 1;
+        $('#nd10').html(dice_data[3]);
     });
 
     $('#d12').click(function(){
         dice_data[4] += 1;
+        $('#nd12').html(dice_data[4]);
     });
 
     $('#d20').click(function(){
         dice_data[5] += 1;
+        $('#nd20').html(dice_data[5]);
     });
 
     //handle if user submits attr change
