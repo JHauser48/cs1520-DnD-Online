@@ -351,7 +351,7 @@ $(document).ready(function(){
             `</div></div>`;
           });
           all_sheets += '<div class="row"><div class="col title"><button class="btn but_sheet title" id = "create_sheet">' +
-          'Create New DM Sheet</button></div></div>'; //add create sheet in case change mind
+          'Create New ' + (isPlayer ? 'Player' : 'DM') + ' Sheet</button></div></div>'; //add create sheet in case change mind
           sheet.html(all_sheets);       //display saved sheets for picking
           //handle if user wants to create a new psheet, get HTML of form from server
           $('#create_sheet').click(function() {
@@ -681,10 +681,10 @@ $(document).ready(function(){
               //if the skill doesn't have a name then don't add it
               if(currentMonsterEdit.skills[skill].skill == '') break;
               var skillRow = $(`<div class="row">
-                                  <div class="col col-md-6">
+                                  <div class="col col-md-7">
                                     Name: <input type="text" class="newMonsterTextField" name="skillName" value="` + currentMonsterEdit.skills[skill].skill + `">
                                   </div>
-                                  <div class="col col-md-6">
+                                  <div class="col col-md-5">
                                     Value: <input type="text" class="newMonsterTextField" name="skillValue" value="` + currentMonsterEdit.skills[skill].value + `">
                                   </div>
                                 </div>`);
@@ -719,10 +719,10 @@ $(document).ready(function(){
                                     Lang: <input type="text" class="newMonsterTextField" name="langName" value="` + currentMonsterEdit.languages[lang].language + `">
                                   </div>
                                   <div class="col col-md-2">
-                                    S: <input type="text" class="newMonsterTextField" name="langS" value="` + currentMonsterEdit.languages[lang].speak + `">
+                                    S: <input type="checkbox" class="newMonsterTextField" name="langS" ` + ((currentMonsterEdit.languages[lang].speak === 'y') ? `checked` : ``) + `>
                                   </div>
                                   <div class="col col-md-2">
-                                    U: <input type="text" class="newMonsterTextField" name="langU" value="` + currentMonsterEdit.languages[lang].understand + `">
+                                    U: <input type="checkbox" class="newMonsterTextField" name="langU" ` + ((currentMonsterEdit.languages[lang].understand === 'y') ? `checked` : ``) + `>
                                   </div>
                                 </div>`);
               $('#langList').append(langRow);
@@ -843,27 +843,27 @@ $(document).ready(function(){
 
           $('#addLang').click(function(){
             langName = $('input[name=newLangName]').val();
-            langS = $('input[name=newLangS]').val();
-            langU = $('input[name=newLangU]').val();
+            langS = $('input[name=newLangS]').prop('checked');
+            langU = $('input[name=newLangU]').prop('checked');
             if(langName == '') return;
-            currentMonsterEdit.languages.push({'language': langName, 'speak': langS, 'understand': langU});
+            currentMonsterEdit.languages.push({'language': langName, 'speak': (langS ? 'y' : 'n'), 'understand': (langU  ? 'y' : 'n')});
             //construct html
             var langRow = $(`<div class="row">
                                 <div class="col col-md-8">
                                   Lang: <input type="text" class="newMonsterTextField" name="langName" value="` + langName + `">
                                 </div>
                                 <div class="col col-md-2">
-                                  S: <input type="text" class="newMonsterTextField" name="langS" value="` + langS + `">
+                                  S: <input type="checkbox" class="newMonsterTextField" name="langS" ` + (langS ? 'checked' : '') + `>
                                 </div>
                                 <div class="col col-md-2">
-                                  U: <input type="text" class="newMonsterTextField" name="langU" value="` + langU + `">
+                                  U: <input type="checkbox" class="newMonsterTextField" name="langU" ` + (langU ? 'checked' : '') + `>
                                 </div>
                               </div>`);
             $('#langList').append(langRow);
             //clear the new lang row
             $('input[name=newLangName]').val('');
-            $('input[name=newLangS]').val('');
-            $('input[name=newLangU]').val('');
+            $('input[name=newLangS]').prop('checked') = false;
+            $('input[name=newLangU]').prop('checked') = false;
             addInputChangeEvent();
           });
 
@@ -1024,8 +1024,10 @@ $(document).ready(function(){
                   //iterate over all children of langList that are div elements
                   $('#langList').children('div').each(function(){
                     var lName = $(this).find('input[name=langName]').val();
-                    var lS = $(this).find('input[name=langS]').val();
-                    var lU = $(this).find('input[name=langS]').val();
+                    var lS = ($(this).find('input[name=langS]').prop('checked') == true) ? 'y' : 'n';
+                    var lU = ($(this).find('input[name=langU]').prop('checked') == true) ? 'y' : 'n';
+                    console.log($(this).find('input[name=langS]'));
+                    console.log($(this).find('input[name=langS]').prop('checked'));
                     monsterToSave[attr].push({'language': lName, 'speak': lS, 'understand': lU});
                   });
                   break;
@@ -1091,17 +1093,20 @@ $(document).ready(function(){
       }
     }
 
+    // HEY BUSTER BROWN WHOEVER DID THIS BETTER FIX IT.
+    // WE HAVE JQUERY FOR A REASON
     document.getElementById("stat_change").style.display ="none";
 
     function openStatChange() {
-        if(document.getElementById("stat_change").style.display == "block"){
-             document.getElementById("stat_change").style.display = "none";
+        if(document.getElementById("stat_change").style.display == "block"){ //<<ALSO WHAT IS THIS INDENTING????
+             document.getElementById("stat_change").style.display = "none"; //<<IT"S ALL OVER THE PLACE
         }else{
           document.getElementById("stat_change").style.display = "block";
         }
     }
 
-    document.getElementById('stat_btn').addEventListener('click', openStatChange);
+    document.getElementById('stat_btn').addEventListener('click', openStatChange);//smh
+    //^^^^^^^^^^^^^^^^^^^^^^^^^ MAKES ME SICK
 
     //function to deal with player adding in csv item (e.g. languages)
     function add_comma_val(but_id, sheet_json) {
@@ -1578,7 +1583,7 @@ $(document).ready(function(){
       adv = $('#adv:checked').val() == "on" ? 1 : 0;
       disadv = $('#disadv:checked').val() == "on" ? 1 : 0;
       mod = $('#modifier').val();
-      console.log(raw_sheet);
+      //console.log(raw_sheet);
       if(raw_sheet == null || mod == "none"){
           mod_val = 0;
       }else{

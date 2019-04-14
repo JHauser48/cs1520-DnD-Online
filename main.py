@@ -1124,8 +1124,9 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     text('Ability Scores~')
                   with tag('div', klass = 'col col-md-5', id = 'tsbtn'):
                     text('Throws/Skills')
-                  with tag('div', klass = 'col col-md-3', id='assBtn'):
-                    text('show')
+                  with tag('div', klass = 'col col-md-3'):
+                    with tag('div', klass = 'btn', id='assBtn'):
+                      text('show')
                 with tag('div', klass = 'row row-no-gutters assSec', style='display: none'):
                   with tag('div', klass = 'col aswin', id = 'shown'):
                     with tag('div', klass = 'row'):
@@ -1202,14 +1203,14 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                           with tag('div', klass = 'col no-border', id='skillList'):
                             text('Skills:')
                         with tag('div', klass = 'row', id='newSkillRow'):
-                          with tag('div', klass = 'col col-md-6', id='skillName'):
+                          with tag('div', klass = 'col col-md-7', id='skillName'):
                             text('Name: ')
                             doc.asis('<input type="text" name="newSkillName" class="newMonsterTextField" placeholder="Name" value="">')
-                          with tag('div', klass = 'col col-md-6', id='skillValue'):
+                          with tag('div', klass = 'col col-md-5', id='skillValue'):
                             text('Value: ')
                             doc.asis('<input type="text" name="newSkillValue" class="newMonsterTextField" placeholder="Value" value="">')
                         with tag('div', klass = 'row'):
-                          with tag('div', klass = 'col', id='addSkill'):
+                          with tag('div', klass = 'btn', id='addSkill'):
                             text('Add Skill')
         #senses languages and traits section
             with tag('div', klass = 'row row-no-gutters'):
@@ -1221,8 +1222,9 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     text('Lang')
                   with tag('div', klass = 'col col-md-3', id = 'traitbtn'):
                     text('Traits')
-                  with tag('div', klass = 'col col-md-3', id='sltBtn'):
-                    text('show')
+                  with tag('div', klass = 'col col-md-3'):
+                    with tag('div', klass = 'btn', id='sltBtn'):
+                      text('show')
                 with tag('div', klass = 'row row-no-gutters sltSec', style='display: none'):
                   with tag('div', klass = 'col senseswin', id = 'shown'):
                     with tag('div', klass = 'row'):
@@ -1236,7 +1238,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         text('Value: ')
                         doc.asis('<input type="text" name="newSenseValue" class="newMonsterTextField" placeholder="Value" value="">')
                     with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col', id='addSense'):
+                      with tag('div', klass = 'btn', id='addSense'):
                         text('Add Sense')
                   with tag('div', klass = 'col langwin', id = 'hidden'):
                     with tag('div', klass = 'row'):
@@ -1248,12 +1250,14 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         doc.asis('<input type="text" name="newLangName" class="newMonsterTextField" placeholder="Name" value="">')
                       with tag('div', klass = 'col col-md-2', id='langS'):
                         text('S: ')
-                        doc.asis('<input type="text" name="newLangS" class="newMonsterTextField" placeholder="Y/N" value="">')
+                        #change to checkboxes
+                        doc.asis('<input type="checkbox" name="newLangS" class="newMonsterTextField" value="speak">')
                       with tag('div', klass = 'col col-md-2', id='langU'):
                         text('U: ')
-                        doc.asis('<input type="text" name="newLangU" class="newMonsterTextField" placeholder="Y/N" value="">')
+                        #change to checkboxes
+                        doc.asis('<input type="checkbox" name="newLangU" class="newMonsterTextField" value="understand">')
                     with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col', id='addLang'):
+                      with tag('div', klass = 'btn', id='addLang'):
                         text('Add Language')
                   with tag('div', klass = 'col traitwin', id = 'hidden'):
                     with tag('div', klass = 'row'):
@@ -1267,7 +1271,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         text('Desc: ')
                         doc.asis('<textarea name="newTraitDesc" class="newMonsterTextArea" placeholder="Description of trait..."></textarea>')
                     with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col', id='addTrait'):
+                      with tag('div', klass = 'btn', id='addTrait'):
                         text('Add Trait')
         #actions reactions and legendary actions
             with tag('div', klass = 'row row-no-gutters'):
@@ -1279,8 +1283,9 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     text('Reactions')
                   with tag('div', klass = 'col col-md-3', id = 'legendbtn'):
                     text('Legend')
-                  with tag('div', klass = 'col col-md-3', id='arlBtn'):
-                    text('show')
+                  with tag('div', klass = 'col col-md-3'):
+                    with tag('div', klass = 'btn', id='arlBtn'):
+                      text('show')
                 with tag('div', klass = 'row row-no-gutters arlSec', style='display: none'):
                   with tag('div', klass = 'col actionswin', id = 'shown'):
                     text('Actions')
@@ -1309,7 +1314,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                           with tag('div', klass = 'col', id='newOtherAction'):
                             text('new other sttack stuff')
                         with tag('div', klass = 'row'):
-                          with tag('div', klass = 'col', id = 'addAction'):
+                          with tag('div', klass = 'btn', id = 'addAction'):
                             text('Add Action')
                   with tag('div', klass = 'col reactionwin', id = 'hidden'):
                     text('Reactions')
@@ -1321,7 +1326,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         text('Desc: ')
                         doc.asis('<textarea name="newReactDesc" class="newMonsterTextArea" placeholder="Description of reaction..."></textarea>')
                     with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col', id='addReact'):
+                      with tag('div', klass = 'btn', id='addReact'):
                         text('Add React')
                   with tag('div', klass = 'col legendwin', id = 'hidden'):
                     text('Legendary Actions')
@@ -1350,7 +1355,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                           with tag('div', klass = 'col', id='newOtherLAction'):
                             text('new legendary other sttack stuff')
                         with tag('div', klass = 'row'):
-                          with tag('div', klass = 'col', id = 'addLAction'):
+                          with tag('div', klass = 'btn', id = 'addLAction'):
                             text('Add Legendary Action')
         #resistances immunities and vulnerabilities
             with tag('div', klass = 'row row-no-gutters'):
@@ -1363,7 +1368,8 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                   with tag('div', klass = 'col col-md-3', id = 'vulnerbtn'):
                     text('Vulner')
                   with tag('div', klass = 'col col-md-3', id='rivBtn'):
-                    text('show')
+                    with tag('div', klass = 'btn', id='rivBtn'):
+                      text('show')
                 with tag('div', klass = 'row row-no-gutters rivSec', style='display: none'):
                   with tag('div', klass = 'col resistwin', id = 'shown'):
                     with tag('div', klass = 'row'):
@@ -1374,7 +1380,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         text('New Resistance: ')
                         doc.asis('<input type="text" name="newResistName" class="newMonsterTextField" placeholder="Resistance" value="">')
                     with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col', id='addResist'):
+                      with tag('div', klass = 'btn', id='addResist'):
                         text('Add Resist')
                   with tag('div', klass = 'col immunewin', id = 'hidden'):
                     with tag('div', klass = 'row'):
@@ -1385,7 +1391,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         text('New Immunity: ')
                         doc.asis('<input type="text" name="newImmuneName" class="newMonsterTextField" placeholder="Immunity" value="">')
                     with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col', id='addImmune'):
+                      with tag('div', klass = 'btn', id='addImmune'):
                         text('Add Immunity')
                   with tag('div', klass = 'col vulnerwin', id = 'hidden'):
                     with tag('div', klass = 'row'):
@@ -1396,7 +1402,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         text('New Vulnerability: ')
                         doc.asis('<input type="text" name="newVulnerName" class="newMonsterTextField" placeholder="Vulnerability" value="">')
                     with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col', id='addVulner'):
+                      with tag('div', klass = 'btn', id='addVulner'):
                         text('Add Vulnerability')
       #end dm edit
       with tag('div', klass = 'col dmencounter', id='hidden'):
