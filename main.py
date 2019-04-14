@@ -110,8 +110,6 @@ dice_info = {
 def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room, isPlayer):
   mod_val = modifier(mod_v)
   mod_msg = (' (modifier) ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
-  if sum(dice_list) == 0:
-    return "No rolls selected..."
 
   rolls = roll_all(dice_list)
   if isPlayer:
@@ -134,6 +132,7 @@ def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room, isPlayer):
     msg += 'Use the ' + ('FIRST ' if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else 'SECOND ')
     msg += ' set of rolls'
     total = (rolls[1] if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else rolls2[1])
+  msg = "No rolls selected..." if sum(dice_list) == 0 else msg
   return msg, total
 
 def roll_all(dice_list):

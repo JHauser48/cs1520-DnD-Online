@@ -260,7 +260,7 @@ input[type="radio"]{
   margin: 4px 3px;
   cursor: pointer;
   margin-right: auto;
-  margin-left: 210px;
+  margin-left: 130px;
   font-size: 16px;
   border-radius: 12px;
   border-color: #FF0000;
@@ -319,7 +319,7 @@ label {
 }
 
 .btn-group button:not(:last-child) {
-  border-right: none; /* Prevent double borders */
+  border-right: none; 
 }
 
 .modal {
@@ -330,6 +330,6 @@ label {
   height: 15%; /* Full height */
   margin: -100px 0 0 -150px;
   margin-left: 10%;
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
+  background-color: rgb(0,0,0);
+  background-color: rgba(0,0,0,0.7); 
 }
