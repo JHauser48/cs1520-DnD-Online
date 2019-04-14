@@ -136,8 +136,13 @@ body{
 #dmtextarea{
   rows: "30";
   cols: "50";
-  width: 100%;
+  width: 1000%;  
   height: 100%;
+}
+
+#dmtextbox {
+  width: 106%;
+  height: 200%;
 }
 
 #sheet_title_input{
