@@ -551,11 +551,11 @@ def get_sheet_form():
       with tag('div', klass = 'col title showbox', id='show_info'):
         text('Character/Level Info')
       with tag('div', klass = 'col title showbox', id='show_stats'):
-        text('Stats (click to view)')
+        text('Stats')
       with tag('div', klass = 'col title showbox', id='show_ws'):
-        text('Weapons/Spells (click to view)')
+        text('Weapons/Spells')
       with tag('div', klass = 'col title showbox', id='show_items'):
-        text('Items & Condition (click to view)')
+        text('Items & Condition')
   with tag('div', id='shown', klass='pinfo'):
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col namebox'):
@@ -780,11 +780,11 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
       with tag('div', klass = 'col title showbox', id='show_info'):
         text('Character/Level Info')
       with tag('div', klass = 'col title showbox', id='show_stats'):
-        text('Stats (click to view)')
+        text('Stats')
       with tag('div', klass = 'col title showbox', id='show_ws'):
-        text('Weapons/Spells (click to view)')
+        text('Weapons/Spells')
       with tag('div', klass = 'col title showbox', id='show_items'):
-        text('Items & Condition (click to view)')
+        text('Items & Condition')
     with tag('div', id='shown', klass='pinfo'):
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namebox'):

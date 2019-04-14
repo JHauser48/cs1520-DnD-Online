@@ -133,7 +133,6 @@ $(document).ready(function(){
                 //hide all other shown, mark as (click to view)
                 $('.' + box).attr('id', 'hidden');
                 let curr_but = box_to_but[box];
-                $('#' + curr_but).append(' (click to view)');
               }
             }
             if ($('.' + box_id).attr('id') == 'hidden') {
@@ -141,7 +140,6 @@ $(document).ready(function(){
               $('.' + box_id).attr('id', 'shown');
               let curr_html = $('#' + but_id).html();
               // active window, remove (click to view)
-              curr_html = curr_html.replace(' (click to view)', '');
               $('#' + but_id).html(curr_html);
             }
           });
@@ -221,6 +219,13 @@ $(document).ready(function(){
           var sheet_obj = {};         //save all newly added attributes for sending back to the server
           // ---BEGIN HANDLERS---
 
+          //if user hovers over tab
+          $('.showbox').hover(function() {
+            $(this).css("background-color", "green");
+          }, function() {
+            $(this).css("background-color", "rgba(26, 26, 23, 0.96)");
+          });
+
           //handle player wanting to switch tabs of psheet
           $('.showbox').click(function() {
             //set clicked to shown (if not already) and all others to hidden
@@ -235,7 +240,6 @@ $(document).ready(function(){
                 //hide all other shown, mark as (click to view)
                 $('.' + box).attr('id', 'hidden');
                 let curr_but = box_to_but[box];
-                $('#' + curr_but).append(' (click to view)');
               }
             }
             if ($('.' + box_id).attr('id') == 'hidden') {
@@ -243,7 +247,6 @@ $(document).ready(function(){
               $('.' + box_id).attr('id', 'shown');
               let curr_html = $('#' + but_id).html();
               // active window, remove (click to view)
-              curr_html = curr_html.replace(' (click to view)', '');
               $('#' + but_id).html(curr_html);
             }
           });
