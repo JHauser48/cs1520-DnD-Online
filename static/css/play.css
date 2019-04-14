@@ -188,7 +188,9 @@ body{
     margin-bottom: 0px;
     padding-top: 10px;
     padding-bottom: 10px;
+    height: auto;
   }
+
 
 .no-border {
   border: none;

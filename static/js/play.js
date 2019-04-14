@@ -112,6 +112,13 @@ $(document).ready(function(){
 
           // --- BEGIN HANDLERS FOR PSHEET ELEMENTS ---
 
+          //if user hovers over tab
+          $('.showbox').hover(function() {
+            $(this).css("background-color", "green");
+          }, function() {
+            $(this).css("background-color", "rgba(26, 26, 23, 0.96)");
+          });
+
           //handle player wanting to switch tabs of psheet
           $('.showbox').click(function() {
             //set clicked to shown (if not already) and all others to hidden
