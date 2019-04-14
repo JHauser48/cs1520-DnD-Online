@@ -1126,7 +1126,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     text('Throws/Skills')
                   with tag('div', klass = 'col col-md-3'):
                     with tag('div', klass = 'btn', id='assBtn'):
-                      text('show')
+                      text('+')
                 with tag('div', klass = 'row row-no-gutters assSec', style='display: none'):
                   with tag('div', klass = 'col aswin', id = 'shown'):
                     with tag('div', klass = 'row'):
@@ -1224,7 +1224,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     text('Traits')
                   with tag('div', klass = 'col col-md-3'):
                     with tag('div', klass = 'btn', id='sltBtn'):
-                      text('show')
+                      text('+')
                 with tag('div', klass = 'row row-no-gutters sltSec', style='display: none'):
                   with tag('div', klass = 'col senseswin', id = 'shown'):
                     with tag('div', klass = 'row'):
@@ -1285,7 +1285,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     text('Legend')
                   with tag('div', klass = 'col col-md-3'):
                     with tag('div', klass = 'btn', id='arlBtn'):
-                      text('show')
+                      text('+')
                 with tag('div', klass = 'row row-no-gutters arlSec', style='display: none'):
                   with tag('div', klass = 'col actionswin', id = 'shown'):
                     text('Actions')
@@ -1369,7 +1369,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                     text('Vulner')
                   with tag('div', klass = 'col col-md-3', id='rivBtn'):
                     with tag('div', klass = 'btn', id='rivBtn'):
-                      text('show')
+                      text('+')
                 with tag('div', klass = 'row row-no-gutters rivSec', style='display: none'):
                   with tag('div', klass = 'col resistwin', id = 'shown'):
                     with tag('div', klass = 'row'):
