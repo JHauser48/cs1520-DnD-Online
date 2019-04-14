@@ -25,7 +25,18 @@
       <div class="container">
     <img src="/static/assets/image2.png" alt="logo">
     {% if badDm %}
-      <script>alert('Selected room already has a DM!')</script>
+      <div class="errorbox" id="baddmbox">
+        <span class="errortext">Selected room already has DM!</span>
+        <button class="btn errorbtn" id="dm_errorbtn">Close</button>
+      </div>
+      <script>load_error_handlers();</script>
+    {% endif %}
+    {% if badJoin %}
+      <div class="errorbox" id="badjoinbox">
+        <span class="errortext">Current account already in a game!</span>
+        <button class="btn errorbtn" id="join_errorbtn">Close</button>
+      </div>
+      <script>load_error_handlers();</script>
     {% endif %}
         <form class="form-inline" action="/joinRoom" method="POST">
           <input class="field" id="roomname" type="text" placeholder="Room Name" name="rname" required>

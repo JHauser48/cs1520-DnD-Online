@@ -200,12 +200,11 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     # person has joined room, must take difference of new clients list and old
     # use to track person in room
     add_client(clients, room, uname, ip, port)
-    # we arent going to display the join room response until they open a sheet of some kind (renamed: status -> join_room_msg)
     if isPlayer:
-      resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'joined',
+      resp = {'msg': uname + ' has entered the room.', 'color': 'red', 'type': 'status',
       'weight': 'normal'}
     else:
-       resp = {'msg': uname + ' has entered as Dungeon Master!', 'color': 'red', 'type': 'joined',
+       resp = {'msg': uname + ' has entered the room.', 'color': 'red', 'type': 'status',
       'weight': 'normal'}
   elif req_type == 'text':
     # someone is sending a message
@@ -460,13 +459,17 @@ def play():
 # redirect them to play url
 @app.route('/joinRoom', methods=['POST'])
 def join_post():
-  # first check, to make sure player is not joining as DM when DM already exists
+  # check that account not already in game, not allowed
+  uname = session.get('name')
+  if uname in u_to_client.keys():
+    return render_template('index.html', badDm=False, badJoin=True)
+  # check, to make sure player is not joining as DM when DM already exists
   if request.form['isPlayer'] == 'DM':
     curr_room = request.form['rname']
     if curr_room in r_to_dm.keys():
       if r_to_dm[curr_room]:
         # if set, already DM, shouldn't allow
-        return render_template('index.html', badDm=True)
+        return render_template('index.html', badDm=True, badJoin=False)
     r_to_dm[curr_room] = True # otherwise room as DM now
   # store session info for use
   #session['name'] = request.form['uname']
