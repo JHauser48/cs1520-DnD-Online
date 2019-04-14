@@ -1703,11 +1703,21 @@ $(document).ready(function(){
             level_up = true;
             let curr_level = Number(raw_sheet['level']);
             curr_level += 1;
+            let more_level = true;
+            //handle possibility of multiple level ups
+            while(more_level) {
+              next_xp = l2x[curr_level + 1];
+              if (curr >= next_xp) {
+                more_level = true;
+                curr_level += 1;
+              } else {
+                more_level = false;
+              }
+            }
             let lev_html = $('#level').html();
             lev_html = lev_html.replace(/\d+/g, curr_level);
             $('#level').html(lev_html);
             raw_sheet['level'] = curr_level;
-            next_xp = l2x[curr_level + 1];
             next_html = next_html.replace(/\d+/g, next_xp);
             $('#next_xp').html(next_html);
           }
