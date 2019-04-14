@@ -1067,8 +1067,8 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
         text('Notes')
     with tag('div', klass = 'row', id = 'dmcontent'):
       with tag('div', klass = 'col dmnotes', id='shown'):
-        with tag('div', klass='row row-no-gutters' id = 'dmtextbox'):
-          with tag('div', klass = 'col col-md-12' id = 'dmtextbox'):
+        with tag('div', klass='row row-no-gutters', id = 'dmtextbox'):
+          with tag('div', klass = 'col col-md-12', id = 'dmtextbox'):
             with tag('textarea', placeholder='Notes for campaign go here...', id='dmtextarea'):
               text(raw_resp['notes'])
       with tag('div', klass = 'col dmmonster', id='hidden'):
