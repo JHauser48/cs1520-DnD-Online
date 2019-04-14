@@ -107,38 +107,44 @@ dice_info = {
   5: ('(d20): ', 20),
 }
 # helper to roll dice, takes dice type and adv/disadv attributes
-def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room, isPlayer):
+def roll_dice(dice_list, mod, mod_v, adv, dis, hide, show, uname, room, isPlayer):
   mod_val = modifier(mod_v)
   mod_msg = (' (modifier) ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
-
   rolls = roll_all(dice_list)
   if isPlayer:
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
       # display alias if character has taken name
       alias = r_u_char[room][uname]
-      msg = alias + ' (' + uname + ') rolled:' + mod_msg + '</br>'
+      msg = alias + ' (' + uname + ') rolled:' + mod_msg 
     else:
-      msg = uname + ' rolled:' + mod_msg + '</br>'
+      msg = uname + ' rolled: ' + mod_msg 
+      msg += '</br>'
   else:
     msg = 'Dungeon Master (' + uname + ') rolled:' + mod_msg + '</br>'
-  msg += rolls[0]
-  msg += 'For a total of: ' + str(rolls[1]) + '</br>'
+    msg += '</br>'
+
+  msg += rolls[0] if show == 1 else ''
+  msg += ' For a total of: ' + str(rolls[1]) + ('</br>' if show else '')
   total = rolls[1]
-  if (adv != dis):
+  if (adv != dis and show == 1):
     #if distinct values, means rolled 2 dice
     rolls2 = roll_all(dice_list)
     msg += 'and ' + ('(with advantage)</br>' if adv else '(with disadvantage) </br>') + rolls2[0]
     msg += 'For a total of: ' + str(rolls2[1]) + '</br>'
-    msg += 'Use the ' + ('FIRST ' if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else 'SECOND ')
-    msg += ' set of rolls'
     total = (rolls[1] if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else rolls2[1])
+  elif (adv != dis and hide == 1):
+    rolls2 = roll_all(dice_list)
+    msg += ' and ' + (str(rolls[1]) if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else str(rolls2[1]))
+    msg += ' (adv)' if adv == 1  else ' (disadv)' 
+    total = (rolls[1] if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else rolls2[1])
+    
   msg = "No rolls selected..." if sum(dice_list) == 0 else msg
   return msg, total
 
 def roll_all(dice_list):
   roll_i = 0
   roll_sum = 0
-  msg = ''
+  msg = ' '
   for roll_count in dice_list:
     if roll_count > 0:
       msg += dice_info[roll_i][0]
@@ -217,7 +223,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       'weight': 'bold'}
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
-    msg, total = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname, room, isPlayer)
+    msg, total = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], req['hide'], req['show'], uname, room, isPlayer)
     if isPlayer:
       resp = {'msg': msg, 'color':'green', 'weight': 'bold', 'type': 'roll', 'total': total}
     else:

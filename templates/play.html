@@ -75,9 +75,17 @@
 								<option value="char">Charisma</option>
 							</select></label></div>
 							<button class = "btn" id ="dice_roll">Roll</button>
-              <button class = "btn" id ="clear_roll">Clear</button>
+                            <button class = "btn" id ="clear_roll">Clear</button>
                             <button class = "btn3" id = "stat_btn">Change Attributes</button>
 					</div>
+                    <div class="rbtn2">
+                            <div class = "rbtn">
+                                     <input type="radio" name = "roll_view" id ="hide_rolls"><label>Hide rolls</label>
+							</div>
+							<div class="rbtn2">
+                                <input type="radio" name = "roll_view" id ="show_rolls"><label>Show Rolls</label>     
+							</div>
+                    </div>
 
 					<div class="modal" id="stat_change">
 						{% if isPlayer %}
