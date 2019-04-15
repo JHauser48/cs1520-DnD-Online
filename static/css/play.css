@@ -135,7 +135,7 @@ body{
 
 #dmtextarea{
   rows: "30";
-  cols: "50";
+  cols: "50";/
   width: 100%;
   height: 100%;
 }
