@@ -1078,8 +1078,8 @@ $(document).ready(function(){
             }
 
             //load in legendary actions
-            $('#lactionList').empty();
-            $('#lactionList').html('Legendary Actions: <input type="text" name="legendActions" class="newMonsterHD" placeholder="Legendary Actions" value="' + (currentMonsterEdit.legendary_actions.num_action == '' ? '0' : currentMonsterEdit.legendary_actions.num_action) + '">');
+            $('#legendActionList').empty();
+            $('#legendActionList').html('Legendary Actions: <input type="text" name="legendActions" class="newMonsterHD" placeholder="Legendary Actions" value="' + (currentMonsterEdit.legendary_actions.num_action == '' ? '0' : currentMonsterEdit.legendary_actions.num_action) + '">');
 
             //load in how many legendary actions the monster can take
             for(action in currentMonsterEdit.legendary_actions.actions){
@@ -1092,10 +1092,10 @@ $(document).ready(function(){
                                    <div class="col no-border">
                                      <div class="row">
                                        <div class="col col-md-6">
-                                         <input type="text" name="actionName" class="newMonsterTextField" placeholder="Action Name" value="` + currentMonsterEdit.legendary_actions.actions[action]['name'] + `">
+                                         <input type="text" name="lactionName" class="newMonsterTextField" placeholder="Action Name" value="` + currentMonsterEdit.legendary_actions.actions[action]['name'] + `">
                                        </div>
                                        <div class="col col-md-4">
-                                         <select class='newMonsterTextField' id='actionType' disabled>
+                                         <select class='newMonsterTextField' id='lactionType' disabled>
                                            <option value='weapon' selected>Weapon</option>
                                            <option value='spell'>Spell</option>
                                            <option value='saving'>Saving</option>
@@ -1108,43 +1108,43 @@ $(document).ready(function(){
                                        <div class="col no-border">
                                          <div class="row">
                                            <div class="col col-md-2">
-                                             Mel: <input type="checkbox" name="weaponMelee" class="newMonsterTextField" ` + (currentMonsterEdit.legendary_actions.actions[action]['melee'] === 'y' ? 'checked' : '') + `>
+                                             Mel: <input type="checkbox" name="lweaponMelee" class="newMonsterTextField" ` + (currentMonsterEdit.legendary_actions.actions[action]['melee'] === 'y' ? 'checked' : '') + `>
                                            </div>
                                            <div class="col col-md-2">
-                                             Ran: <input type="checkbox" name="weaponRanged" class="newMonsterTextField" ` + (currentMonsterEdit.legendary_actions.actions[action]['ranged'] === 'y' ? 'checked' : '') + `>
+                                             Ran: <input type="checkbox" name="lweaponRanged" class="newMonsterTextField" ` + (currentMonsterEdit.legendary_actions.actions[action]['ranged'] === 'y' ? 'checked' : '') + `>
                                            </div>
                                            <div class="col col-md-3">
-                                             To Hit <input type="text" name="weaponToHit" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['tohit'] + `">
+                                             To Hit <input type="text" name="lweaponToHit" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['tohit'] + `">
                                            </div>
                                            <div class="col col-md-5">
-                                             Target <input type="text" name="weaponTarget" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['target'] + `">
+                                             Target <input type="text" name="lweaponTarget" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['target'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col col-md-3">
-                                             Cost: <input type="text" name="cost" class="newMonsterTextField" value="` + action['cost'] + `">
+                                             Cost: <input type="text" name="lcost" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['cost'] + `">
                                            </div>
                                            <div class="col col-md-3">
-                                             Reach: <input type="text" name="weaponReach" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['reach'] + `">
+                                             Reach: <input type="text" name="lweaponReach" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['reach'] + `">
                                            </div>
                                            <div class="col col-md-3">
-                                             Range Min: <input type="text" name="weaponRangeMin" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range']['min'] + `">
+                                             Range Min: <input type="text" name="lweaponRangeMin" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range']['min'] + `">
                                            </div>
                                            <div class="col col-md-3">
-                                             Range Max: <input type="text" name="weaponRangeMax" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range']['max'] + `">
+                                             Range Max: <input type="text" name="lweaponRangeMax" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range']['max'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col col-md-5">
-                                             Damage: <input type="text" name="dDnumber" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dnum'] + `">d<input type="text" name="dDvalue" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dval'] + `">
+                                             Damage: <input type="text" name="ldDnumber" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dnum'] + `">d<input type="text" name="dDvalue" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dval'] + `">
                                            </div>
                                            <div class="col col-md-7">
-                                             Damage Type: <input type="text" name="damageType" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['type'] + `">
+                                             Damage Type: <input type="text" name="ldamageType" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['type'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col">
-                                             <textarea class="newMonsterTextArea" id="weaponActionNotes" placeholder="Weapon Attack Notes Go Here">` + currentMonsterEdit.legendary_actions.actions[action]['notes'] + `</textarea>
+                                             <textarea class="newMonsterTextArea" id="lweaponActionNotes" placeholder="Weapon Attack Notes Go Here">` + currentMonsterEdit.legendary_actions.actions[action]['notes'] + `</textarea>
                                            </div>
                                          </div>
                                        </div>
@@ -1157,10 +1157,10 @@ $(document).ready(function(){
                                    <div class="col no-border">
                                      <div class="row">
                                        <div class="col col-md-6">
-                                         <input type="text" name="actionName" class="newMonsterTextField" placeholder="Action Name" value="` + currentMonsterEdit.legendary_actions.actions[action]['name'] + `">
+                                         <input type="text" name="lactionName" class="newMonsterTextField" placeholder="Action Name" value="` + currentMonsterEdit.legendary_actions.actions[action]['name'] + `">
                                        </div>
                                        <div class="col col-md-4">
-                                         <select class='newMonsterTextField' id='actionType' disabled>
+                                         <select class='newMonsterTextField' id='lactionType' disabled>
                                            <option value='weapon'>Weapon</option>
                                            <option value='spell' selected>Spell</option>
                                            <option value='saving'>Saving</option>
@@ -1173,43 +1173,43 @@ $(document).ready(function(){
                                        <div class="col no-border">
                                          <div class="row">
                                            <div class="col col-md-2">
-                                             Mel: <input type="checkbox" name="spellMelee" class="newMonsterTextField" ` + ((currentMonsterEdit.legendary_actions.actions[action]['melee'] == 'y') ? 'checked' : '') + `>
+                                             Mel: <input type="checkbox" name="lspellMelee" class="newMonsterTextField" ` + ((currentMonsterEdit.legendary_actions.actions[action]['melee'] == 'y') ? 'checked' : '') + `>
                                            </div>
                                            <div class="col col-md-2">
-                                             Ran: <input type="checkbox" name="spellRanged" class="newMonsterTextField" ` + ((currentMonsterEdit.legendary_actions.actions[action]['ranged'] == 'y') ? 'checked' : '') + `>
+                                             Ran: <input type="checkbox" name="lspellRanged" class="newMonsterTextField" ` + ((currentMonsterEdit.legendary_actions.actions[action]['ranged'] == 'y') ? 'checked' : '') + `>
                                            </div>
                                            <div class="col col-md-3">
-                                             To Hit <input type="text" name="spellToHit" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['tohit'] + `">
+                                             To Hit <input type="text" name="lspellToHit" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['tohit'] + `">
                                            </div>
                                            <div class="col col-md-5">
-                                             Target <input type="text" name="spellTarget" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['target'] + `">
+                                             Target <input type="text" name="lspellTarget" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['target'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col col-md-3">
-                                             Cost: <input type="text" name="cost" class="newMonsterTextField" value="` + action['cost'] + `">
+                                             Cost: <input type="text" name="lcost" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['cost'] + `">
                                            </div>
                                            <div class="col col-md-3">
-                                             Reach: <input type="text" name="spellReach" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['reach'] + `">
+                                             Reach: <input type="text" name="lspellReach" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['reach'] + `">
                                            </div>
                                            <div class="col col-md-3">
-                                             Range Min: <input type="text" name="spellRangeMin" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range']['min'] + `">
+                                             Range Min: <input type="text" name="lspellRangeMin" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range']['min'] + `">
                                            </div>
                                            <div class="col col-md-3">
-                                             Range Max: <input type="text" name="spellRangeMax" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range']['max'] + `">
+                                             Range Max: <input type="text" name="lspellRangeMax" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range']['max'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col col-md-5">
-                                             Damage: <input type="text" name="dDnumberS" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dnum'] + `">d<input type="text" name="dDvalueS" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dval'] + `">
+                                             Damage: <input type="text" name="ldDnumberS" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dnum'] + `">d<input type="text" name="dDvalueS" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dval'] + `">
                                            </div>
                                            <div class="col col-md-7">
-                                             Damage Type: <input type="text" name="damageTypeS" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['type'] + `">
+                                             Damage Type: <input type="text" name="ldamageTypeS" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['type'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col">
-                                             <textarea class="newMonsterTextArea" id="spellActionNotes" placeholder="Spell Attack Notes Go Here">` + currentMonsterEdit.legendary_actions.actions[action]['notes'] + `</textarea>
+                                             <textarea class="newMonsterTextArea" id="lspellActionNotes" placeholder="Spell Attack Notes Go Here">` + currentMonsterEdit.legendary_actions.actions[action]['notes'] + `</textarea>
                                            </div>
                                          </div>
                                        </div>
@@ -1222,10 +1222,10 @@ $(document).ready(function(){
                                    <div class="col no-border">
                                      <div class="row">
                                        <div class="col col-md-6">
-                                         <input type="text" name="actionName" class="newMonsterTextField" placeholder="Action Name" value="` + currentMonsterEdit.legendary_actions.actions[action]['name'] + `">
+                                         <input type="text" name="lactionName" class="newMonsterTextField" placeholder="Action Name" value="` + currentMonsterEdit.legendary_actions.actions[action]['name'] + `">
                                        </div>
                                        <div class="col col-md-4">
-                                         <select class='newMonsterTextField' id='actionType' disabled>
+                                         <select class='newMonsterTextField' id='lactionType' disabled>
                                            <option value='weapon'>Weapon</option>
                                            <option value='spell'>Spell</option>
                                            <option value='saving' selected>Saving</option>
@@ -1238,26 +1238,26 @@ $(document).ready(function(){
                                        <div class="col no-border">
                                          <div class="row">
                                            <div class="col col-md-6">
-                                             Throw Type: <input type="text" name="throwType" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['throw-type'] + `">
+                                             Throw Type: <input type="text" name="lthrowType" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['throw-type'] + `">
                                            </div>
                                            <div class="col col-md-6">
-                                             Throw Value: <input type="text" name="throwValue" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['throw-value'] + `">
+                                             Throw Value: <input type="text" name="lthrowValue" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['throw-value'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col col-md-4">
-                                             Cost: <input type="text" name="cost" class="newMonsterTextField" value="` + action['cost'] + `">
+                                             Cost: <input type="text" name="lcost" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['cost'] + `">
                                            </div>
                                            <div class="col col-md-4">
-                                             Range: <input type="text" name="throwRange" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range'] + `">
+                                             Range: <input type="text" name="lthrowRange" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['range'] + `">
                                            </div>
                                            <div class="col col-md-4">
-                                             Target: <input type="text" name="throwTarget" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['target'] + `">
+                                             Target: <input type="text" name="lthrowTarget" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['target'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col col-md-5">
-                                             Damage: <input type="text" name="dDnumberT" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dnum'] + `">d<input type="text" name="dDvalueT" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dval'] + `">
+                                             Damage: <input type="text" name="ldDnumberT" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dnum'] + `">d<input type="text" name="dDvalueT" class="newMonsterHD" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['dval'] + `">
                                            </div>
                                            <div class="col col-md-7">
                                              Damage Type: <input type="text" name="damageTypeT" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['damage']['type'] + `">
@@ -1265,15 +1265,15 @@ $(document).ready(function(){
                                          </div>
                                          <div class="row">
                                            <div class="col col-md-6">
-                                             Condition: <input type="text" name="throwCondition" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['condition']['name'] + `">
+                                             Condition: <input type="text" name="lthrowCondition" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['condition']['name'] + `">
                                            </div>
                                            <div class="col col-md-6">
-                                             Duration: <input type="text" name="throwDuration" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['condition']['duration'] + `">
+                                             Duration: <input type="text" name="lthrowDuration" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['condition']['duration'] + `">
                                            </div>
                                          </div>
                                          <div class="row">
                                            <div class="col">
-                                             <textarea class="newMonsterTextArea" id="savingActionNotes" placeholder="Saving Throw Action Notes Go Here">` + currentMonsterEdit.legendary_actions.actions[action]['notes'] + `</textarea>
+                                             <textarea class="newMonsterTextArea" id="lthrowActionNotes" placeholder="Saving Throw Action Notes Go Here">` + currentMonsterEdit.legendary_actions.actions[action]['notes'] + `</textarea>
                                            </div>
                                          </div>
                                        </div>
@@ -1286,10 +1286,10 @@ $(document).ready(function(){
                                    <div class="col no-border">
                                      <div class="row">
                                        <div class="col col-md-6">
-                                         <input type="text" name="actionName" class="newMonsterTextField" placeholder="Action Name" value="` + currentMonsterEdit.legendary_actions.actions[action]['name'] + `">
+                                         <input type="text" name="lactionName" class="newMonsterTextField" placeholder="Action Name" value="` + currentMonsterEdit.legendary_actions.actions[action]['name'] + `">
                                        </div>
                                        <div class="col col-md-4">
-                                         <select class='newMonsterTextField' id='actionType' disabled>
+                                         <select class='newMonsterTextField' id='lactionType' disabled>
                                            <option value='weapon'>Weapon</option>
                                            <option value='spell'>Spell</option>
                                            <option value='saving'>Saving</option>
@@ -1300,17 +1300,17 @@ $(document).ready(function(){
                                      </div>
                                      <div class="row" id="info-other-` + spaceToDash(currentMonsterEdit.legendary_actions.actions[action]['name']) + `" style="display: none">
                                        <div class="col col-md-3">
-                                         Cost: <input type="text" name="cost" class="newMonsterTextField" value="` + action['cost'] + `">
+                                         Cost: <input type="text" name="lcost" class="newMonsterTextField" value="` + currentMonsterEdit.legendary_actions.actions[action]['cost'] + `">
                                        </div>
                                        <div class="col col-md-9">
-                                         <textarea class="newMonsterTextArea" id="otherActionNotes" placeholder="Action Notes Go Here">` + currentMonsterEdit.legendary_actions.actions[action]['notes'] + `</textarea>
+                                         <textarea class="newMonsterTextArea" id="lotherActionNotes" placeholder="Action Notes Go Here">` + currentMonsterEdit.legendary_actions.actions[action]['notes'] + `</textarea>
                                        </div>
                                      </div>
                                    </div>
                                  </div>`);
                   break;
               }
-              $('#lactionList').append(lactionRow);
+              $('#legendActionList').append(lactionRow);
             }
             addActionExpandEvent();
 
@@ -1467,6 +1467,7 @@ $(document).ready(function(){
             aName = $('input[name=newActionName]').val();
             if(aName == '') return;
             aType = $('#newActionType').val();
+            if(aType == '') return;
             var action = {};
             //console.log(aName);
             var actionRow;
@@ -1816,6 +1817,7 @@ $(document).ready(function(){
             aName = $('input[name=newLActionName]').val();
             if(aName == '') return;
             aType = $('#newLActionType').val();
+            if(aType == '') return;
             aCost = $('input[name=newLActionCost]').val();
             var action = {};
             //console.log(aName);
@@ -1842,10 +1844,10 @@ $(document).ready(function(){
                                  <div class="col no-border">
                                    <div class="row">
                                      <div class="col col-md-6">
-                                       <input type="text" name="actionName" class="newMonsterTextField" placeholder="Action Name" value="` + action['name'] + `">
+                                       <input type="text" name="lactionName" class="newMonsterTextField" placeholder="Action Name" value="` + action['name'] + `">
                                      </div>
                                      <div class="col col-md-4">
-                                       <select class='newMonsterTextField' id='actionType' disabled>
+                                       <select class='newMonsterTextField' id='lactionType' disabled>
                                          <option value='weapon' selected>Weapon</option>
                                          <option value='spell'>Spell</option>
                                          <option value='saving'>Saving</option>
@@ -1858,43 +1860,43 @@ $(document).ready(function(){
                                      <div class="col no-border">
                                        <div class="row">
                                          <div class="col col-md-2">
-                                           Mel: <input type="checkbox" name="weaponMelee" class="newMonsterTextField" ` + (action['melee'] === 'y' ? 'checked' : '') + `>
+                                           Mel: <input type="checkbox" name="lweaponMelee" class="newMonsterTextField" ` + (action['melee'] === 'y' ? 'checked' : '') + `>
                                          </div>
                                          <div class="col col-md-2">
-                                           Ran: <input type="checkbox" name="weaponRanged" class="newMonsterTextField" ` + (action['ranged'] === 'y' ? 'checked' : '') + `>
+                                           Ran: <input type="checkbox" name="lweaponRanged" class="newMonsterTextField" ` + (action['ranged'] === 'y' ? 'checked' : '') + `>
                                          </div>
                                          <div class="col col-md-3">
-                                           To Hit <input type="text" name="weaponToHit" class="newMonsterTextField" value="` + action['tohit'] + `">
+                                           To Hit <input type="text" name="lweaponToHit" class="newMonsterTextField" value="` + action['tohit'] + `">
                                          </div>
                                          <div class="col col-md-5">
-                                           Target <input type="text" name="weaponTarget" class="newMonsterTextField" value="` + action['target'] + `">
+                                           Target <input type="text" name="lweaponTarget" class="newMonsterTextField" value="` + action['target'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col col-md-3">
-                                           Cost: <input type="text" name="cost" class="newMonsterTextField" value="` + action['cost'] + `">
+                                           Cost: <input type="text" name="lcost" class="newMonsterTextField" value="` + action['cost'] + `">
                                          </div>
                                          <div class="col col-md-3">
-                                           Reach: <input type="text" name="weaponReach" class="newMonsterTextField" value="` + action['reach'] + `">
+                                           Reach: <input type="text" name="lweaponReach" class="newMonsterTextField" value="` + action['reach'] + `">
                                          </div>
                                          <div class="col col-md-3">
-                                           Range Min: <input type="text" name="weaponRangeMin" class="newMonsterTextField" value="` + action['range']['min'] + `">
+                                           Range Min: <input type="text" name="lweaponRangeMin" class="newMonsterTextField" value="` + action['range']['min'] + `">
                                          </div>
                                          <div class="col col-md-3">
-                                           Range Max: <input type="text" name="weaponRangeMax" class="newMonsterTextField" value="` + action['range']['max'] + `">
+                                           Range Max: <input type="text" name="lweaponRangeMax" class="newMonsterTextField" value="` + action['range']['max'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col col-md-5">
-                                           Damage: <input type="text" name="dDnumber" class="newMonsterHD" value="` + action['damage']['dnum'] + `">d<input type="text" name="dDvalue" class="newMonsterHD" value="` + action['damage']['dval'] + `">
+                                           Damage: <input type="text" name="ldDnumber" class="newMonsterHD" value="` + action['damage']['dnum'] + `">d<input type="text" name="ldDvalue" class="newMonsterHD" value="` + action['damage']['dval'] + `">
                                          </div>
                                          <div class="col col-md-7">
-                                           Damage Type: <input type="text" name="damageType" class="newMonsterTextField" value="` + action['damage']['type'] + `">
+                                           Damage Type: <input type="text" name="ldamageType" class="newMonsterTextField" value="` + action['damage']['type'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col">
-                                           <textarea class="newMonsterTextArea" id="weaponActionNotes" placeholder="Weapon Attack Notes Go Here">` + action['notes'] + `</textarea>
+                                           <textarea class="newMonsterTextArea" id="lweaponActionNotes" placeholder="Weapon Attack Notes Go Here">` + action['notes'] + `</textarea>
                                          </div>
                                        </div>
                                      </div>
@@ -1941,10 +1943,10 @@ $(document).ready(function(){
                                  <div class="col no-border">
                                    <div class="row">
                                      <div class="col col-md-6">
-                                       <input type="text" name="actionName" class="newMonsterTextField" placeholder="Action Name" value="` + action['name'] + `">
+                                       <input type="text" name="lactionName" class="newMonsterTextField" placeholder="Action Name" value="` + action['name'] + `">
                                      </div>
                                      <div class="col col-md-4">
-                                       <select class='newMonsterTextField' id='actionType' disabled>
+                                       <select class='newMonsterTextField' id='lactionType' disabled>
                                          <option value='weapon'>Weapon</option>
                                          <option value='spell' selected>Spell</option>
                                          <option value='saving'>Saving</option>
@@ -1957,43 +1959,43 @@ $(document).ready(function(){
                                      <div class="col no-border">
                                        <div class="row">
                                          <div class="col col-md-2">
-                                           Mel: <input type="checkbox" name="spellMelee" class="newMonsterTextField" ` + ((action['melee'] == 'y') ? 'checked' : '') + `>
+                                           Mel: <input type="checkbox" name="lspellMelee" class="newMonsterTextField" ` + ((action['melee'] == 'y') ? 'checked' : '') + `>
                                          </div>
                                          <div class="col col-md-2">
-                                           Ran: <input type="checkbox" name="spellRanged" class="newMonsterTextField" ` + ((action['ranged'] == 'y') ? 'checked' : '') + `>
+                                           Ran: <input type="checkbox" name="lspellRanged" class="newMonsterTextField" ` + ((action['ranged'] == 'y') ? 'checked' : '') + `>
                                          </div>
                                          <div class="col col-md-3">
-                                           To Hit <input type="text" name="spellToHit" class="newMonsterTextField" value="` + action['tohit'] + `">
+                                           To Hit <input type="text" name="lspellToHit" class="newMonsterTextField" value="` + action['tohit'] + `">
                                          </div>
                                          <div class="col col-md-5">
-                                           Target <input type="text" name="spellTarget" class="newMonsterTextField" value="` + action['target'] + `">
+                                           Target <input type="text" name="lspellTarget" class="newMonsterTextField" value="` + action['target'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col col-md-3">
-                                           Cost: <input type="text" name="cost" class="newMonsterTextField" value="` + action['cost'] + `">
+                                           Cost: <input type="text" name="lcost" class="newMonsterTextField" value="` + action['cost'] + `">
                                          </div>
                                          <div class="col col-md-3">
-                                           Reach: <input type="text" name="spellReach" class="newMonsterTextField" value="` + action['reach'] + `">
+                                           Reach: <input type="text" name="lspellReach" class="newMonsterTextField" value="` + action['reach'] + `">
                                          </div>
                                          <div class="col col-md-3">
-                                           Range Min: <input type="text" name="spellRangeMin" class="newMonsterTextField" value="` + action['range']['min'] + `">
+                                           Range Min: <input type="text" name="lspellRangeMin" class="newMonsterTextField" value="` + action['range']['min'] + `">
                                          </div>
                                          <div class="col col-md-3">
-                                           Range Max: <input type="text" name="spellRangeMax" class="newMonsterTextField" value="` + action['range']['max'] + `">
+                                           Range Max: <input type="text" name="lspellRangeMax" class="newMonsterTextField" value="` + action['range']['max'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col col-md-5">
-                                           Damage: <input type="text" name="dDnumberS" class="newMonsterHD" value="` + action['damage']['dnum'] + `">d<input type="text" name="dDvalueS" class="newMonsterHD" value="` + action['damage']['dval'] + `">
+                                           Damage: <input type="text" name="ldDnumberS" class="newMonsterHD" value="` + action['damage']['dnum'] + `">d<input type="text" name="ldDvalueS" class="newMonsterHD" value="` + action['damage']['dval'] + `">
                                          </div>
                                          <div class="col col-md-7">
-                                           Damage Type: <input type="text" name="damageTypeS" class="newMonsterTextField" value="` + action['damage']['type'] + `">
+                                           Damage Type: <input type="text" name="ldamageTypeS" class="newMonsterTextField" value="` + action['damage']['type'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col">
-                                           <textarea class="newMonsterTextArea" id="spellActionNotes" placeholder="Spell Attack Notes Go Here">` + action['notes'] + `</textarea>
+                                           <textarea class="newMonsterTextArea" id="lspellActionNotes" placeholder="Spell Attack Notes Go Here">` + action['notes'] + `</textarea>
                                          </div>
                                        </div>
                                      </div>
@@ -2039,10 +2041,10 @@ $(document).ready(function(){
                                  <div class="col no-border">
                                    <div class="row">
                                      <div class="col col-md-6">
-                                       <input type="text" name="actionName" class="newMonsterTextField" placeholder="Action Name" value="` + action['name'] + `">
+                                       <input type="text" name="lactionName" class="newMonsterTextField" placeholder="Action Name" value="` + action['name'] + `">
                                      </div>
                                      <div class="col col-md-4">
-                                       <select class='newMonsterTextField' id='actionType' disabled>
+                                       <select class='newMonsterTextField' id='lactionType' disabled>
                                          <option value='weapon'>Weapon</option>
                                          <option value='spell'>Spell</option>
                                          <option value='saving' selected>Saving</option>
@@ -2055,42 +2057,42 @@ $(document).ready(function(){
                                      <div class="col no-border">
                                        <div class="row">
                                          <div class="col col-md-6">
-                                           Throw Type: <input type="text" name="throwType" class="newMonsterTextField" value="` + action['throw-type'] + `">
+                                           Throw Type: <input type="text" name="lthrowType" class="newMonsterTextField" value="` + action['throw-type'] + `">
                                          </div>
                                          <div class="col col-md-6">
-                                           Throw Value: <input type="text" name="throwValue" class="newMonsterTextField" value="` + action['throw-value'] + `">
+                                           Throw Value: <input type="text" name="lthrowValue" class="newMonsterTextField" value="` + action['throw-value'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col col-md-4">
-                                           Cost: <input type="text" name="cost" class="newMonsterTextField" value="` + action['cost'] + `">
+                                           Cost: <input type="text" name="lcost" class="newMonsterTextField" value="` + action['cost'] + `">
                                          </div>
                                          <div class="col col-md-4">
-                                           Range: <input type="text" name="throwRange" class="newMonsterTextField" value="` + action['range'] + `">
+                                           Range: <input type="text" name="lthrowRange" class="newMonsterTextField" value="` + action['range'] + `">
                                          </div>
                                          <div class="col col-md-4">
-                                           Target: <input type="text" name="throwTarget" class="newMonsterTextField" value="` + action['target'] + `">
+                                           Target: <input type="text" name="lthrowTarget" class="newMonsterTextField" value="` + action['target'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col col-md-5">
-                                           Damage: <input type="text" name="dDnumberT" class="newMonsterHD" value="` + action['damage']['dnum'] + `">d<input type="text" name="dDvalueT" class="newMonsterHD" value="` + action['damage']['dval'] + `">
+                                           Damage: <input type="text" name="ldDnumberT" class="newMonsterHD" value="` + action['damage']['dnum'] + `">d<input type="text" name="ldDvalueT" class="newMonsterHD" value="` + action['damage']['dval'] + `">
                                          </div>
                                          <div class="col col-md-7">
-                                           Damage Type: <input type="text" name="damageTypeT" class="newMonsterTextField" value="` + action['damage']['type'] + `">
+                                           Damage Type: <input type="text" name="ldamageTypeT" class="newMonsterTextField" value="` + action['damage']['type'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col col-md-6">
-                                           Condition: <input type="text" name="throwCondition" class="newMonsterTextField" value="` + action['condition']['name'] + `">
+                                           Condition: <input type="text" name="lthrowCondition" class="newMonsterTextField" value="` + action['condition']['name'] + `">
                                          </div>
                                          <div class="col col-md-6">
-                                           Duration: <input type="text" name="throwDuration" class="newMonsterTextField" value="` + action['condition']['duration'] + `">
+                                           Duration: <input type="text" name="lthrowDuration" class="newMonsterTextField" value="` + action['condition']['duration'] + `">
                                          </div>
                                        </div>
                                        <div class="row">
                                          <div class="col">
-                                           <textarea class="newMonsterTextArea" id="savingActionNotes" placeholder="Saving Throw Action Notes Go Here">` + action['notes'] + `</textarea>
+                                           <textarea class="newMonsterTextArea" id="lthrowActionNotes" placeholder="Saving Throw Action Notes Go Here">` + action['notes'] + `</textarea>
                                          </div>
                                        </div>
                                      </div>
@@ -2124,10 +2126,10 @@ $(document).ready(function(){
                                  <div class="col no-border">
                                    <div class="row">
                                      <div class="col col-md-6">
-                                       <input type="text" name="actionName" class="newMonsterTextField" placeholder="Action Name" value="` + action['name'] + `">
+                                       <input type="text" name="lactionName" class="newMonsterTextField" placeholder="Action Name" value="` + action['name'] + `">
                                      </div>
                                      <div class="col col-md-4">
-                                       <select class='newMonsterTextField' id='actionType' disabled>
+                                       <select class='newMonsterTextField' id='lactionType' disabled>
                                          <option value='weapon'>Weapon</option>
                                          <option value='spell'>Spell</option>
                                          <option value='saving'>Saving</option>
@@ -2138,10 +2140,10 @@ $(document).ready(function(){
                                    </div>
                                    <div class="row" id="info-other-` + spaceToDash(action['name']) + `" style="display: none">
                                      <div class="col col-md-3">
-                                       Cost: <input type="text" name="cost" class="newMonsterTextField" value="` + action['cost'] + `">
+                                       Cost: <input type="text" name="lcost" class="newMonsterTextField" value="` + action['cost'] + `">
                                      </div>
                                      <div class="col col-md-9">
-                                       <textarea class="newMonsterTextArea" id="otherActionNotes" placeholder="Action Notes Go Here">` + action['notes'] + `</textarea>
+                                       <textarea class="newMonsterTextArea" id="lotherActionNotes" placeholder="Action Notes Go Here">` + action['notes'] + `</textarea>
                                      </div>
                                    </div>
                                  </div>
@@ -2157,7 +2159,7 @@ $(document).ready(function(){
             }
             currentMonsterEdit.actions.push(action);
             //console.log(currentMonsterEdit);
-            $('#lactionList').append(actionRow);
+            $('#legendActionList').append(actionRow);
             addActionExpandEvent();
           });
 
@@ -2348,65 +2350,65 @@ $(document).ready(function(){
                   break;
                 case 'legendary_actions':
                   //save num_actions
-                  monsterToSave[attr].num_action = $('input[name=legendActions]').val();
+                  monsterToSave.legendary_actions.num_action = $('input[name=legendActions]').val();
                   //clear actions array
-                  monsterToSave[attr].actions.splice(0, monsterToSave[attr].length);
-                  $('#lactionList').children('div').each(function(){
-                    var action = {};
-                    action['name'] = $(this).find('input[name=actionName]').val();
-                    action['action-type'] = $(this).find('#actionType').val();
-                    action['cost'] = $(this).find('input[name=legendActions]');
-                    switch(action['action-type']){
+                  monsterToSave.legendary_actions.actions.splice(0, monsterToSave.legendary_actions.actions.length);
+                  $('#legendActionList').children('div').each(function(){
+                    var laction = {};
+                    laction['name'] = $(this).find('input[name=lactionName]').val();
+                    laction['action-type'] = $(this).find('#lactionType').val();
+                    laction['cost'] = $(this).find('input[name=lcost]').val();
+                    switch(laction['action-type']){
                       case 'weapon':
-                        action['melee'] = $(this).find('input[name=weaponMelee]').prop('checked') ? 'y' : 'n';
-                        action['ranged'] = $(this).find('input[name=weaponRanged]').prop('checked') ? 'y' : 'n';
-                        action['tohit'] = $(this).find('input[name=weaponToHit]').val();
-                        action['target'] = $(this).find('input[name=weaponTarget]').val();
-                        action['reach'] = $(this).find('input[name=weaponReach]').val();
-                        action['range'] = {};
-                        action['range']['min'] = $(this).find('input[name=weaponRangeMin]').val();
-                        action['range']['max'] = $(this).find('input[name=weaponRangeMax]').val();
-                        action['damage'] = {};
-                        action['damage']['dnum'] = $(this).find('input[name=dDnumber]').val();
-                        action['damage']['dval'] = $(this).find('input[name=dDvalue]').val();
-                        action['damage']['type'] = $(this).find('input[name=damageType]').val();
-                        action['notes'] = $(this).find('#weaponActionNotes').val();
+                        laction['melee'] = $(this).find('input[name=lweaponMelee]').prop('checked') ? 'y' : 'n';
+                        laction['ranged'] = $(this).find('input[name=lweaponRanged]').prop('checked') ? 'y' : 'n';
+                        laction['tohit'] = $(this).find('input[name=lweaponToHit]').val();
+                        laction['target'] = $(this).find('input[name=lweaponTarget]').val();
+                        laction['reach'] = $(this).find('input[name=lweaponReach]').val();
+                        laction['range'] = {};
+                        laction['range']['min'] = $(this).find('input[name=lweaponRangeMin]').val();
+                        laction['range']['max'] = $(this).find('input[name=lweaponRangeMax]').val();
+                        laction['damage'] = {};
+                        laction['damage']['dnum'] = $(this).find('input[name=ldDnumber]').val();
+                        laction['damage']['dval'] = $(this).find('input[name=ldDvalue]').val();
+                        laction['damage']['type'] = $(this).find('input[name=ldamageType]').val();
+                        laction['notes'] = $(this).find('#lweaponActionNotes').val();
                         break;
                       case 'spell':
-                        action['melee'] = $(this).find('input[name=spellMelee]').prop('checked') ? 'y' : 'n';
-                        action['ranged'] = $(this).find('input[name=spellRanged]').prop('checked') ? 'y' : 'n';
-                        action['tohit'] = $(this).find('input[name=spellToHit]').val();
-                        action['target'] = $(this).find('input[name=spellTarget]').val();
-                        action['reach'] = $(this).find('input[name=spellReach]').val();
-                        action['range'] = {};
-                        action['range']['min'] = $(this).find('input[name=spellRangeMin]').val();
-                        action['range']['max'] = $(this).find('input[name=spellRangeMax]').val();
-                        action['damage'] = {};
-                        action['damage']['dnum'] = $(this).find('input[name=dDnumberS]').val();
-                        action['damage']['dval'] = $(this).find('input[name=dDvalueS]').val();
-                        action['damage']['type'] = $(this).find('input[name=damageTypeS]').val();
-                        action['notes'] = $(this).find('#spellActionNotes').val();
+                        laction['melee'] = $(this).find('input[name=lspellMelee]').prop('checked') ? 'y' : 'n';
+                        laction['ranged'] = $(this).find('input[name=lspellRanged]').prop('checked') ? 'y' : 'n';
+                        laction['tohit'] = $(this).find('input[name=lspellToHit]').val();
+                        laction['target'] = $(this).find('input[name=lspellTarget]').val();
+                        laction['reach'] = $(this).find('input[name=lspellReach]').val();
+                        laction['range'] = {};
+                        laction['range']['min'] = $(this).find('input[name=lspellRangeMin]').val();
+                        laction['range']['max'] = $(this).find('input[name=lspellRangeMax]').val();
+                        laction['damage'] = {};
+                        laction['damage']['dnum'] = $(this).find('input[name=ldDnumberS]').val();
+                        laction['damage']['dval'] = $(this).find('input[name=ldDvalueS]').val();
+                        laction['damage']['type'] = $(this).find('input[name=ldamageTypeS]').val();
+                        laction['notes'] = $(this).find('#lspellActionNotes').val();
                         break;
                       case 'saving':
-                        action['throw-type'] = $(this).find('input[name=throwType]').val();
-                        action['throw-value'] = $(this).find('input[name=throwValue]').val();
-                        action['range'] = $(this).find('input[name=throwRange]').val();
-                        action['target'] = $(this).find('input[name=throwTarget]').val();
-                        action['damage'] = {};
-                        action['damage']['dnum'] = $(this).find('input[name=dDnumberT]').val();
-                        action['damage']['dval'] = $(this).find('input[name=dDvalueT]').val();
-                        action['damage']['type'] = $(this).find('input[name=damageTypeT]').val();
-                        action['condition'] = {};
-                        action['condition']['name'] = $(this).find('input[name=throwCondition]').val();
-                        action['condition']['duration'] = $(this).find('input[name=throwDuration]').val();
-                        action['notes'] = $(this).find('#throwActionNotes').val();
+                        laction['throw-type'] = $(this).find('input[name=lthrowType]').val();
+                        laction['throw-value'] = $(this).find('input[name=lthrowValue]').val();
+                        laction['range'] = $(this).find('input[name=lthrowRange]').val();
+                        laction['target'] = $(this).find('input[name=lthrowTarget]').val();
+                        laction['damage'] = {};
+                        laction['damage']['dnum'] = $(this).find('input[name=ldDnumberT]').val();
+                        laction['damage']['dval'] = $(this).find('input[name=ldDvalueT]').val();
+                        laction['damage']['type'] = $(this).find('input[name=ldamageTypeT]').val();
+                        laction['condition'] = {};
+                        laction['condition']['name'] = $(this).find('input[name=lthrowCondition]').val();
+                        laction['condition']['duration'] = $(this).find('input[name=lthrowDuration]').val();
+                        laction['notes'] = $(this).find('#lthrowActionNotes').val();
                         break;
                       case 'other':
-                        action['notes'] = $(this).find('#otherActionNotes').val();
+                        laction['notes'] = $(this).find('#lotherActionNotes').val();
                         break;
                     }
-                    console.log(action);
-                    monsterToSave[attr].actions.push(action);
+                    console.log(laction);
+                    monsterToSave.legendary_actions.actions.push(laction);
                   });
                   break;
                 default:

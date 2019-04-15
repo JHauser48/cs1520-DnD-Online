@@ -135,13 +135,8 @@ body{
 
 #dmtextarea{
   rows: "30";
-<<<<<<< HEAD
-  cols: "50";/
-  width: 100%;
-=======
   cols: "50";
-  width: 1000%;  
->>>>>>> 931427d33d947c1ac1cefc964ee4a2330064f2e1
+  width: 1000%;
   height: 100%;
 }
 
@@ -331,7 +326,7 @@ label {
 }
 
 .btn-group button:not(:last-child) {
-  border-right: none; 
+  border-right: none;
 }
 
 .modal {
@@ -343,5 +338,5 @@ label {
   margin: -100px 0 0 -150px;
   margin-left: 10%;
   background-color: rgb(0,0,0);
-  background-color: rgba(0,0,0,0.7); 
+  background-color: rgba(0,0,0,0.7);
 }

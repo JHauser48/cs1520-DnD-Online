@@ -115,9 +115,9 @@ def roll_dice(dice_list, mod, mod_v, adv, dis, hide, show, uname, room, isPlayer
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
       # display alias if character has taken name
       alias = r_u_char[room][uname]
-      msg = alias + ' (' + uname + ') rolled:' + mod_msg 
+      msg = alias + ' (' + uname + ') rolled:' + mod_msg
     else:
-      msg = uname + ' rolled: ' + mod_msg 
+      msg = uname + ' rolled: ' + mod_msg
       msg += '</br>'
   else:
     msg = 'Dungeon Master (' + uname + ') rolled:' + mod_msg + '</br>'
@@ -135,9 +135,9 @@ def roll_dice(dice_list, mod, mod_v, adv, dis, hide, show, uname, room, isPlayer
   elif (adv != dis and hide == 1):
     rolls2 = roll_all(dice_list)
     msg += ' and ' + (str(rolls[1]) if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else str(rolls2[1]))
-    msg += ' (adv)' if adv == 1  else ' (disadv)' 
+    msg += ' (adv)' if adv == 1  else ' (disadv)'
     total = (rolls[1] if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else rolls2[1])
-    
+
   msg = "No rolls selected..." if sum(dice_list) == 0 else msg
   return msg, total
 
@@ -1471,7 +1471,7 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                         text('Add React')
                   with tag('div', klass = 'col legendwin', id = 'hidden'):
                     with tag('div', klass = 'row'):
-                      with tag('div', klass = 'col no-border', id='lactionList'):
+                      with tag('div', klass = 'col no-border', id='legendActionList'):
                         text('Legendary Actions:')
                         doc.asis('<input type="text" name="legendActions" class="newMonsterHD" placeholder="Legendary Actions" value="">')
                     with tag('div', klass = 'row', id='newLActionRow'):
