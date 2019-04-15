@@ -118,6 +118,13 @@ $(document).ready(function(){
 
           // --- BEGIN HANDLERS FOR PSHEET ELEMENTS ---
 
+          //if user hovers over tab
+          $('.showbox').hover(function() {
+            $(this).css("background-color", "green");
+          }, function() {
+            $(this).css("background-color", "rgba(26, 26, 23, 0.96)");
+          });
+
           //handle player wanting to switch tabs of psheet
           $('.showbox').click(function() {
             //set clicked to shown (if not already) and all others to hidden
@@ -132,7 +139,6 @@ $(document).ready(function(){
                 //hide all other shown, mark as (click to view)
                 $('.' + box).attr('id', 'hidden');
                 let curr_but = box_to_but[box];
-                $('#' + curr_but).append(' (click to view)');
               }
             }
             if ($('.' + box_id).attr('id') == 'hidden') {
@@ -140,7 +146,6 @@ $(document).ready(function(){
               $('.' + box_id).attr('id', 'shown');
               let curr_html = $('#' + but_id).html();
               // active window, remove (click to view)
-              curr_html = curr_html.replace(' (click to view)', '');
               $('#' + but_id).html(curr_html);
             }
           });
@@ -220,6 +225,13 @@ $(document).ready(function(){
           var sheet_obj = {};         //save all newly added attributes for sending back to the server
           // ---BEGIN HANDLERS---
 
+          //if user hovers over tab
+          $('.showbox').hover(function() {
+            $(this).css("background-color", "green");
+          }, function() {
+            $(this).css("background-color", "rgba(26, 26, 23, 0.96)");
+          });
+
           //handle player wanting to switch tabs of psheet
           $('.showbox').click(function() {
             //set clicked to shown (if not already) and all others to hidden
@@ -234,7 +246,6 @@ $(document).ready(function(){
                 //hide all other shown, mark as (click to view)
                 $('.' + box).attr('id', 'hidden');
                 let curr_but = box_to_but[box];
-                $('#' + curr_but).append(' (click to view)');
               }
             }
             if ($('.' + box_id).attr('id') == 'hidden') {
@@ -242,7 +253,6 @@ $(document).ready(function(){
               $('.' + box_id).attr('id', 'shown');
               let curr_html = $('#' + but_id).html();
               // active window, remove (click to view)
-              curr_html = curr_html.replace(' (click to view)', '');
               $('#' + but_id).html(curr_html);
             }
           });
@@ -2924,11 +2934,13 @@ $(document).ready(function(){
 
     //handle if user asks for dice roll
     $('#dice_roll').click(function(){
-      var adv, disadv, mod, mod_val;
+      var adv, disadv, mod, mod_val, hide, show;
       // 1, 0 used to represent true, false respectively for advantage and disadvantage
       adv = $('#adv:checked').val() == "on" ? 1 : 0;
       disadv = $('#disadv:checked').val() == "on" ? 1 : 0;
       mod = $('#modifier').val();
+      hide = $('#hide_rolls:checked').val()  == "on" ? 1 : 0;
+      show= $('#show_rolls:checked').val()  == "on" ? 1 : 0;
       //console.log(raw_sheet);
       if(raw_sheet == null || mod == "none"){
           mod_val = 0;
@@ -2941,7 +2953,7 @@ $(document).ready(function(){
       }
      // mod_val = mod != "none" ? raw_sheet['ability-scores'][mod] : 0;
       // create string from type appended with dice info
-      let msg = JSON.stringify({type: 'dice_roll', dice_list: dice_data, modifier: mod, modifier_value: mod_val, adv: adv, disadv: disadv});
+      let msg = JSON.stringify({type: 'dice_roll', dice_list: dice_data, modifier: mod, modifier_value: mod_val, adv: adv, disadv: disadv, hide: hide, show: show});
       socket.send(msg);
       dice_data = [0, 0, 0, 0, 0, 0];
       $('#nd4').html(0);
@@ -3037,11 +3049,21 @@ $(document).ready(function(){
             level_up = true;
             let curr_level = Number(raw_sheet['level']);
             curr_level += 1;
+            let more_level = true;
+            //handle possibility of multiple level ups
+            while(more_level) {
+              next_xp = l2x[curr_level + 1];
+              if (curr >= next_xp) {
+                more_level = true;
+                curr_level += 1;
+              } else {
+                more_level = false;
+              }
+            }
             let lev_html = $('#level').html();
             lev_html = lev_html.replace(/\d+/g, curr_level);
             $('#level').html(lev_html);
             raw_sheet['level'] = curr_level;
-            next_xp = l2x[curr_level + 1];
             next_html = next_html.replace(/\d+/g, next_xp);
             $('#next_xp').html(next_html);
           }

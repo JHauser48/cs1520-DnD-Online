@@ -24,3 +24,14 @@ $(document).ready(function()
         p_field1[0].setCustomValidity('');
 	});
 });
+
+// create handlers for error box
+function load_error_handlers() {
+    // someone clicks to exit, remove box
+    $('.btn.errorbtn').click(function(){
+        let parent = this.closest('.errorbox');   //start nearest error box, remove all children
+        $(parent).children().remove();
+        $(parent).remove();
+    });
+
+}

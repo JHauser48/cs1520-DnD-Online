@@ -107,39 +107,44 @@ dice_info = {
   5: ('(d20): ', 20),
 }
 # helper to roll dice, takes dice type and adv/disadv attributes
-def roll_dice(dice_list, mod, mod_v, adv, dis, uname, room, isPlayer):
+def roll_dice(dice_list, mod, mod_v, adv, dis, hide, show, uname, room, isPlayer):
   mod_val = modifier(mod_v)
   mod_msg = (' (modifier) ' + mod_stats[mod] + ' +' + str(mod_val)) if mod != 'none' else ''
-  if sum(dice_list) == 0:
-    return "No rolls selected..."
-
   rolls = roll_all(dice_list)
   if isPlayer:
     if room in r_u_char.keys() and uname in r_u_char[room].keys():
       # display alias if character has taken name
       alias = r_u_char[room][uname]
-      msg = alias + ' (' + uname + ') rolled:' + mod_msg + '</br>'
+      msg = alias + ' (' + uname + ') rolled:' + mod_msg 
     else:
-      msg = uname + ' rolled:' + mod_msg + '</br>'
+      msg = uname + ' rolled: ' + mod_msg 
+      msg += '</br>'
   else:
     msg = 'Dungeon Master (' + uname + ') rolled:' + mod_msg + '</br>'
-  msg += rolls[0]
-  msg += 'For a total of: ' + str(rolls[1]) + '</br>'
+    msg += '</br>'
+
+  msg += rolls[0] if show == 1 else ''
+  msg += ' For a total of: ' + str(rolls[1]) + ('</br>' if show else '')
   total = rolls[1]
-  if (adv != dis):
+  if (adv != dis and show == 1):
     #if distinct values, means rolled 2 dice
     rolls2 = roll_all(dice_list)
     msg += 'and ' + ('(with advantage)</br>' if adv else '(with disadvantage) </br>') + rolls2[0]
     msg += 'For a total of: ' + str(rolls2[1]) + '</br>'
-    msg += 'Use the ' + ('FIRST ' if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else 'SECOND ')
-    msg += ' set of rolls'
     total = (rolls[1] if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else rolls2[1])
+  elif (adv != dis and hide == 1):
+    rolls2 = roll_all(dice_list)
+    msg += ' and ' + (str(rolls[1]) if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else str(rolls2[1]))
+    msg += ' (adv)' if adv == 1  else ' (disadv)' 
+    total = (rolls[1] if ((rolls[1] >= rolls2[1] and adv) or (rolls[1] <= rolls2[1] and dis)) else rolls2[1])
+    
+  msg = "No rolls selected..." if sum(dice_list) == 0 else msg
   return msg, total
 
 def roll_all(dice_list):
   roll_i = 0
   roll_sum = 0
-  msg = ''
+  msg = ' '
   for roll_count in dice_list:
     if roll_count > 0:
       msg += dice_info[roll_i][0]
@@ -195,12 +200,11 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     # person has joined room, must take difference of new clients list and old
     # use to track person in room
     add_client(clients, room, uname, ip, port)
-    # we arent going to display the join room response until they open a sheet of some kind (renamed: status -> join_room_msg)
     if isPlayer:
-      resp = {'msg': uname + ' has entered the battle!', 'color': 'red', 'type': 'joined',
+      resp = {'msg': uname + ' has entered the room.', 'color': 'red', 'type': 'status',
       'weight': 'normal'}
     else:
-       resp = {'msg': uname + ' has entered as Dungeon Master!', 'color': 'red', 'type': 'joined',
+       resp = {'msg': uname + ' has entered the room.', 'color': 'red', 'type': 'status',
       'weight': 'normal'}
   elif req_type == 'text':
     # someone is sending a message
@@ -218,7 +222,7 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
       'weight': 'bold'}
   elif req_type == 'dice_roll':
     # someone is asking for dice rolls
-    msg, total = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], uname, room, isPlayer)
+    msg, total = roll_dice(req['dice_list'],req['modifier'], req['modifier_value'], req['adv'], req['disadv'], req['hide'], req['show'], uname, room, isPlayer)
     if isPlayer:
       resp = {'msg': msg, 'color':'green', 'weight': 'bold', 'type': 'roll', 'total': total}
     else:
@@ -455,13 +459,17 @@ def play():
 # redirect them to play url
 @app.route('/joinRoom', methods=['POST'])
 def join_post():
-  # first check, to make sure player is not joining as DM when DM already exists
+  # check that account not already in game, not allowed
+  uname = session.get('name')
+  if uname in u_to_client.keys():
+    return render_template('index.html', badDm=False, badJoin=True)
+  # check, to make sure player is not joining as DM when DM already exists
   if request.form['isPlayer'] == 'DM':
     curr_room = request.form['rname']
     if curr_room in r_to_dm.keys():
       if r_to_dm[curr_room]:
         # if set, already DM, shouldn't allow
-        return render_template('index.html', badDm=True)
+        return render_template('index.html', badDm=True, badJoin=False)
     r_to_dm[curr_room] = True # otherwise room as DM now
   # store session info for use
   #session['name'] = request.form['uname']
@@ -543,11 +551,11 @@ def get_sheet_form():
       with tag('div', klass = 'col title showbox', id='show_info'):
         text('Character/Level Info')
       with tag('div', klass = 'col title showbox', id='show_stats'):
-        text('Stats (click to view)')
+        text('Stats')
       with tag('div', klass = 'col title showbox', id='show_ws'):
-        text('Weapons/Spells (click to view)')
+        text('Weapons/Spells')
       with tag('div', klass = 'col title showbox', id='show_items'):
-        text('Items & Condition (click to view)')
+        text('Items & Condition')
   with tag('div', id='shown', klass='pinfo'):
     with tag('div', klass = 'row'):
       with tag('div', klass = 'col namebox'):
@@ -772,11 +780,11 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
       with tag('div', klass = 'col title showbox', id='show_info'):
         text('Character/Level Info')
       with tag('div', klass = 'col title showbox', id='show_stats'):
-        text('Stats (click to view)')
+        text('Stats')
       with tag('div', klass = 'col title showbox', id='show_ws'):
-        text('Weapons/Spells (click to view)')
+        text('Weapons/Spells')
       with tag('div', klass = 'col title showbox', id='show_items'):
-        text('Items & Condition (click to view)')
+        text('Items & Condition')
     with tag('div', id='shown', klass='pinfo'):
       with tag('div', klass = 'row'):
         with tag('div', klass = 'col namebox'):
@@ -1059,8 +1067,8 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
         text('Notes')
     with tag('div', klass = 'row', id = 'dmcontent'):
       with tag('div', klass = 'col dmnotes', id='shown'):
-        with tag('div', klass='row row-no-gutters'):
-          with tag('div', klass = 'col col-md-12'):
+        with tag('div', klass='row row-no-gutters', id = 'dmtextbox'):
+          with tag('div', klass = 'col col-md-12', id = 'dmtextbox'):
             with tag('textarea', placeholder='Notes for campaign go here...', id='dmtextarea'):
               text(raw_resp['notes'])
       with tag('div', klass = 'col dmmonster', id='hidden'):

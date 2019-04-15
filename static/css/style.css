@@ -24,6 +24,22 @@
   border-color: #FF0000;
 }
 
+.errorbox {
+  border: 5px solid red;
+  border-radius: 2px;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.81);
+  margin-bottom: 10%;
+}
+
+.errortext {
+  color: red;
+  font-weight: bolder;
+}
+
+.btn.errorbtn {
+  margin: 7%;
+}
 
 
 .field {
