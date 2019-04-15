@@ -134,15 +134,11 @@ body{
 }
 
 #dmtextarea{
-  rows: "30";
-  cols: "50";
-  width: 1000%;
-  height: 100%;
+  width: 100%;
 }
 
 #dmtextbox {
   width: 106%;
-  height: 200%;
 }
 
 #sheet_title_input{
@@ -151,7 +147,6 @@ body{
 
 .dmnotes{
   display: inline-block;
-  height: 100%;
 }
 
 .dmmonsterlist{

@@ -414,20 +414,23 @@ $(document).ready(function(){
           console.log(clients);
           //resizing STUFF
           $('#dmcontent').css('max-height', sheet.height() - $('#dm-title-row').height() - $('#dm-button-row').height());
+          //adjust size of textarea
+          $('#dmtextarea').css('min-height', $('#dmcontent').css('max-height'));
           //should override the original window.resize
-          $(window).resize(function(){
+          $(window).resize(function(){//doesnt override just does twice which doesn't really matter
             $('#chatbox').height($(window).height() / 2);
             $('#chatlog').css('max-height', $('#chatbox').height());
             sheet.height($(window).height() * sheetSize);
             $('#dmcontent').css('max-height', sheet.height() - $('#dm-title-row').height() - $('#dm-button-row').height());
+            //adjust size of textarea
+            $('#dmtextarea').css('min-height', $('#dmcontent').css('max-height'));// we want the text area to take up the full content window
           });
 
           //dm notes event listener
           $('#dmtextarea').change(function(){
             raw_sheet['notes'] = $('#dmtextarea').val();
           });
-          //adjust size of textarea
-          $('#dmtextarea').width($('#dmnotes').width());
+
 
           //get all the content divs for easy access later
           arrDmContentDiv = [$('.dmnotes'), $('.dmmonster'), $('.dmencounter')];//dm sheet div button
