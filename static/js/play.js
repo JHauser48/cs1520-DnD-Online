@@ -2264,8 +2264,8 @@ $(document).ready(function(){
                     var lName = $(this).find('input[name=langName]').val();
                     var lS = ($(this).find('input[name=langS]').prop('checked') == true) ? 'y' : 'n';
                     var lU = ($(this).find('input[name=langU]').prop('checked') == true) ? 'y' : 'n';
-                    console.log($(this).find('input[name=langS]'));
-                    console.log($(this).find('input[name=langS]').prop('checked'));
+                    //console.log($(this).find('input[name=langS]'));
+                    //console.log($(this).find('input[name=langS]').prop('checked'));
                     monsterToSave[attr].push({'language': lName, 'speak': lS, 'understand': lU});
                   });
                   break;
@@ -2337,7 +2337,7 @@ $(document).ready(function(){
                         action['notes'] = $(this).find('#otherActionNotes').val();
                         break;
                     }
-                    console.log(action);
+                    //console.log(action);
                     monsterToSave[attr].push(action);
                   });
                   break;
@@ -2410,7 +2410,7 @@ $(document).ready(function(){
                         laction['notes'] = $(this).find('#lotherActionNotes').val();
                         break;
                     }
-                    console.log(laction);
+                    //console.log(laction);
                     monsterToSave.legendary_actions.actions.push(laction);
                   });
                   break;
@@ -2441,33 +2441,374 @@ $(document).ready(function(){
           });
           //get monster divs from monster list in the encounter div
           $('#emonsterlist').children('div').each(function(){
-            $(this).click(()=>{addMonsterToEncounter($(this).html())});
+            $(this).click(()=>{loadMonsterType($(this).html())});
             $(this).attr('id', 'div-' + spaceToDash($(this).html()) + '-btn');
           });
 
           //ENCOUNTER PAGE FUNCTIONS
-          var addMonsterToEncounter = function(monsterName)
-          {
-            console.log(monsterName);
+          $('#startEncounterBtn').click(function(){
+            $('.startEncounter').attr('id', 'hidden');
+            $('.encounterstuff').attr('id', 'shown');
+            //clear raw_sheet just in case
+            raw_sheet.encounter['current_turn'] = 0;
+            raw_sheet.encounter.monsters.splice(0, raw_sheet.encounter.monsters.length);
+            raw_sheet.encounter.turnorder.splice(0, raw_sheet.encounter.turnorder.length);
+          });
+
+          $('#resumeEncounterBtn').click(function(){
+            if(raw_sheet.encounter.turnorder.length == 0) return;//no previoud encounter to resume
+            $('.startEncounter').attr('id', 'hidden');
+            $('.encounterstuff').attr('id', 'shown');
+            let msg = JSON.stringify({type: 'dmstatus', msg: 'Resuming Encounter'});
+            socket.send(msg);
+            $('.emonstermake').attr('id', 'hidden');
+            //show cntrl btns
+            $('.controlbtns').attr('id', 'shown');
+            //clear encounter list
+            $('#encounterList').html('');
+            $('#encounterList').html('Turn Order: (Current Turn: <span id="currentTurnSpan"></span>)');
+            $('#currentTurnSpan').html(raw_sheet.encounter.turnorder[raw_sheet.encounter['current_turn']]);
+            //build html
+            for(morp in raw_sheet.encounter.turnorder){
+              console.log(morp);
+              if(raw_sheet.encounter.turnorder[morp].hasOwnProperty('uname')){
+                //build player row
+                var row = $(`<div class="row">
+                               <div class="col col-md-12">
+                                 ` + raw_sheet.encounter.turnorder[morp]['uname'] + `(` + raw_sheet.encounter.turnorder[morp]['alias'] + `)
+                               </div>
+                             </div>`);
+                //add row
+                $('#encounterList').append(row);
+              }else{
+                //build monster row
+                var row = $(`<div class="row">
+                               <div class="col no-border">
+                                 <div class="row">
+                                   <div class="col col-md-8">
+                                     ` + raw_sheet.encounter.turnorder[morp]['name'] + `
+                                   </div>
+                                   <div class="col col-md-4">
+                                     <div class="btn" id="eexpand-` + morp + `">+</div>
+                                   </div>
+                                 </div>
+                                 <div class="row" id="eexpand-` + morp + `-info">
+                                   <div class="col col-md-12 no-border">
+                                     <div class="row">
+                                       <div class="col col-md-8">
+                                         Type: <input class="newMonsterTextField" value="` + raw_sheet.encounter.turnorder[morp]['type'] + `" readonly>
+                                       </div>
+                                       <div class="col col-md-4">
+                                         Health: <input name="eChangeHealth" class="newMonsterTextField" value="` + raw_sheet.encounter.turnorder[morp]['health'] + `" placeholder="` + raw_sheet.encounter.turnorder[morp]['max-health'] + `">
+                                       </div>
+                                     </div>
+                                     <div class="row">
+                                       <div class="col col-md-12">
+                                         Inventory:</br>
+                                         <textarea name="eChangeInven" class="newMonsterTextArea">` + raw_sheet.encounter.turnorder[morp]['inven'] + `</textarea>
+                                       </div>
+                                     </div>
+                                     <div class="row">
+                                       <div class="col col-md-8">
+                                         Notes:</br>
+                                         <textarea name="eChangeNotes" class="newMonsterTextArea">` + raw_sheet.encounter.turnorder[morp]['notes'] + `</textarea>
+                                       </div>
+                                       <div class="col col-md-4">
+                                         Info:</br>
+                                         <div class="btn" id="getInfoBtn-` + morp + `">?</div>
+                                       </div>
+                                     </div>
+                                   </div>
+                                 </div>
+                               </div>
+                             </div>`);
+                $('#encounterList').append(row);
+              }
+            }
+            addGeneratedButtons();
+          });
+
+          $('#randEMName').click(function(){
+            console.log('random name');
+            var name = '';
+            var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            for(var i = 0; i < 13; i++)
+              name += possible.charAt(Math.floor(Math.random() * possible.length));
+            $('#eMName').val(name);
+            console.log(name);
+          });
+
+          $('#avgHealthBtn').click(function(){
+            console.log('avg health');
+            var type = $('#eMType').val();
+            if(type == '') return;
+            $('#eMHealth').val(raw_sheet.monsters[type].hp);
+          });
+
+          $('#randHealthBtn').click(function(){
+            console.log('random health');
+            var type = $('#eMType').val();
+            if(type == '') return;
+            var randhp = rollHealth(parseInt(raw_sheet.monsters[type].hit_dice.value, 10),
+                                    parseInt(raw_sheet.monsters[type].hit_dice.number, 10),
+                                    getASModifier(raw_sheet.monsters[type].ability_scores.const));
+            $('#eMHealth').val(randhp);
+          });
+
+          var loadMonsterType = function(monsterName){
+            $('#eMType').val(monsterName);
           }
+
+          $('#nextTurnBtn').click(function(){
+            raw_sheet.encounter['current_turn'] += 1;
+            if(raw_sheet.encounter['current_turn'] >= raw_sheet.encounter['turnorder'].length)
+              raw_sheet.encounter['current_turn'] = 0;
+            console.log(raw_sheet.encounter.turnorder[parseInt(raw_sheet.encounter['current_turn'])]);
+            $('#currentTurnSpan').html(raw_sheet.encounter.turnorder[parseInt(raw_sheet.encounter['current_turn'])]['name']);
+          });
+
+          $('#endEncBtn').focusout(function(){
+            $(this).html("End Encounter");
+          });
+
+          $('#endEncBtn').click(function(){
+            var flag = $(this).html();
+            if(flag === "End Encounter"){
+              $(this).html('Click Again...');
+            }else{
+              //clear everything and reset hidden tabs
+              raw_sheet.encounter['current_turn'] = 0;
+              raw_sheet.encounter['monsters'] = [];
+              raw_sheet.encounter['turnorder'] = [];
+              $('#encounterList').html('');
+              $('.startEncounter').attr('id', 'shown');
+              $('.encounterstuff').attr('id', 'hidden');
+              $('.emonstermake').attr('id', 'shown');
+              $('.controlbtns').attr('id', 'hidden');
+            }
+          });
+
+          $('#add2Encounter').click(function(){
+            var monster = {};
+            monster['name'] = $('#eMName').val();
+            monster['type'] = $('#eMType').val();
+            monster['health'] = $('#eMHealth').val();
+            monster['max-health'] = $('#eMHealth').val();
+            monster['notes'] = '';
+            if(monster['name'] == '' || monster['type'] == '' || monster['health'] == '') return;
+            monster['inven'] = $('#eMInven').val();
+            //console.log("MOD>>>" + getASModifier(raw_sheet.monsters[monster['type']].ability_scores.dex));
+            monster['init'] = rollInit(parseInt(getASModifier(raw_sheet.monsters[monster['type']].ability_scores.dex), 10));
+            //add to monsters array in raw sheet
+            console.log(monster);
+            raw_sheet.encounter.monsters.push(monster);
+            //add monster to encounterList
+            var row = $(`<div class="row">
+                           <div class="col">
+                           ` + monster['name'] + ` (` + monster['type'] + `)
+                           </div>
+                         </div>`);
+            $('#encounterList').append(row);
+            //clear the add monster stuff
+            $('#eMName').val('');
+            $('#eMType').val('');
+            $('#eMHealth').val('');
+            $('#eMInven').val('');
+          });
+
+          $('#rollInit').focusout(function(){
+            $(this).html("Roll Initiative");
+          });
+
+          var ePlayerList = [];
+          $('#rollInit').click(function(){
+            var flag = $(this).html();
+            if(flag === "Roll Initiative"){
+              $(this).html('Click Again...');
+            }
+            else{
+              //add all the players to the encounter
+              for(client in clients){
+                console.log(clients[client]);
+                if(client == uname) continue;
+                var eplayer = {};
+                eplayer['uname'] = client;
+                eplayer['alias'] = clients[client];
+                eplayer['init'] = '';
+                ePlayerList.push(eplayer);
+              }
+              //clear encounterList
+              $('#encounterList').html('');
+              //get player's initiative rolls
+              for(ep in ePlayerList){
+                var pinitrow = $(`<div class="row">
+                                    <div class="col col-md-12" id="pinit-`+ ep +`-`+ spaceToDash(ePlayerList[ep]['uname']) + `">
+                                      `+ ePlayerList[ep]['uname'] +`(` + ePlayerList[ep]['alias'] + `)
+                                      <input class="newMonsterTextField" id="pinit-`+ ep +`-`+ spaceToDash(ePlayerList[ep]['uname']) + `-roll">
+                                    </div>
+                                  </div>`);
+                $('#encounterList').append(pinitrow);
+              }
+              $('#encounterList').append($('<div class="row"><div class="col col-md-12"><div class="btn" id="finishInitBtn">Finish Initiative Rolls</div></div></div>'));
+              addFinishInitBtn();
+              //sort monsters in decreasing initiative order
+              raw_sheet.encounter.monsters.sort((a, b) => {(parseInt(a.init) > parseInt(b.init)) ? -1 : ((parseInt(b.init) > parseInt(a.init)) ? 1 : 0)});
+              //hide emonstermake
+              $('.emonstermake').attr('id', 'hidden');
+              //also broadcast that we are rolling for initiative
+              let msg = JSON.stringify({type: 'dmstatus', msg: 'Roll For Initiative!!!'});
+              socket.send(msg);
+            }
+          });
+
+          var addFinishInitBtn = function(){
+            $('#finishInitBtn').click(function(){
+              //show control btns
+              $('.controlbtns').attr('id', 'shown');
+              let msg = JSON.stringify({type: 'dmstatus', msg: 'Done Taking Initiative Rolls'});
+              socket.send(msg);
+              //set initiatives for everyone
+              for(ep in ePlayerList){
+                ePLayerList[ep]['init'] = parseInt($('input[id^="pinit-' + ep + '-"]').val()) != NaN ? parseInt($('input[id^="pinit-' + ep + '-"]').val()) : 0;
+              }
+              //merge arrays
+              raw_sheet.encounter.turnorder = raw_sheet.encounter.monsters.concat(ePlayerList);
+              //sort array
+              raw_sheet.encounter.turnorder.sort((a, b) => {return -1 * (parseInt(a.init) - parseInt(b.init))});
+              console.log(raw_sheet.encounter.turnorder);
+              //clear encounter list
+              $('#encounterList').html('');
+              $('#encounterList').html('Turn Order: (Current Turn: <span id="currentTurnSpan"></span>)');
+              $('#currentTurnSpan').html(raw_sheet.encounter.turnorder[parseInt(raw_sheet.encounter['current_turn'])]['name']);
+              //build html
+              for(morp in raw_sheet.encounter.turnorder){
+                console.log(morp);
+                if(raw_sheet.encounter.turnorder[morp].hasOwnProperty('uname')){
+                  //build player row
+                  var row = $(`<div class="row">
+                                 <div class="col col-md-12">
+                                   ` + raw_sheet.encounter.turnorder[morp]['uname'] + `(` + raw_sheet.encounter.turnorder[morp]['alias'] + `)
+                                 </div>
+                               </div>`);
+                  //add row
+                  $('#encounterList').append(row);
+                }else{
+                  //build monster row
+                  var row = $(`<div class="row">
+                                 <div class="col no-border">
+                                   <div class="row">
+                                     <div class="col col-md-8">
+                                       ` + raw_sheet.encounter.turnorder[morp]['name'] + `
+                                     </div>
+                                     <div class="col col-md-4">
+                                       <div class="btn" id="eexpand-` + morp + `">+</div>
+                                     </div>
+                                   </div>
+                                   <div class="row" id="eexpand-` + morp + `-info">
+                                     <div class="col col-md-12 no-border">
+                                       <div class="row">
+                                         <div class="col col-md-8">
+                                           Type: <input class="newMonsterTextField" value="` + raw_sheet.encounter.turnorder[morp]['type'] + `" readonly>
+                                         </div>
+                                         <div class="col col-md-4">
+                                           Health: <input name="eChangehealth" class="newMonsterTextField" value="` + raw_sheet.encounter.turnorder[morp]['health'] + `" placeholder="` + raw_sheet.encounter.turnorder[morp]['max-health'] + `">
+                                         </div>
+                                       </div>
+                                       <div class="row">
+                                         <div class="col col-md-12">
+                                           Inventory:</br>
+                                           <textarea name="eChangeinven" class="newMonsterTextArea">` + raw_sheet.encounter.turnorder[morp]['inven'] + `</textarea>
+                                         </div>
+                                       </div>
+                                       <div class="row">
+                                         <div class="col col-md-8">
+                                           Notes:</br>
+                                           <textarea name="eChangenotes" class="newMonsterTextArea">` + raw_sheet.encounter.turnorder[morp]['notes'] + `</textarea>
+                                         </div>
+                                         <div class="col col-md-4">
+                                           Info:</br>
+                                           <div class="btn" id="getInfoBtn-` + morp + `">?</div>
+                                         </div>
+                                       </div>
+                                     </div>
+                                   </div>
+                                 </div>
+                               </div>`);
+                  $('#encounterList').append(row);
+                }
+              }
+              addGeneratedButtons();
+            });
+          }
+
+          var addGeneratedButtons = function()
+          {
+            //set expand-morp-info to Hidden
+            $('div[id^="eexpand-"]:not([class="btn"])').css('display', 'none');
+            $('div.btn[id^="eexpand-"]').click(function(){
+              //console.log(this);
+              var inner = $(this).html();
+              var id = $(this).attr('id');
+              if(inner == '+'){
+                $('#' + id + '-info').css('display', 'inline-block');
+                $(this).html('-');
+              }else{
+                $('#' + id + '-info').css('display', 'none');
+                $(this).html('+');
+              }
+            });
+            $('[id^="getInfoBtn-"').click(function(){
+              var index = parseInt($(this).attr('id').split('-')[1]);
+              //load monster into edit screen
+              loadMonsterEdit(raw_sheet.encounter.turnorder[index]['type']);
+              //reset
+              $('#eexpand-' + index + '-info').css('display', 'none');
+              $('#eexpand-' + index).html('+');
+              //swap view to edit screen
+              $('.dmencounter').attr('id', 'hidden');
+              $('.dmmonster').attr('id', 'shown');
+            });
+            //need to add a change event that saves to the sheet
+            $('input[name^="eChange"], textarea[name^="eChange"]').change(function(){
+              //console.log("changed!!");
+              var list = $(this).parentsUntil('[id^="eexpand-"]');
+              var len = list.length;
+              var index = parseInt($(list[len-1]).parent().attr('id').split('-')[1]);
+              var prop = $(this).attr('name').split('eChange')[1];
+              //console.log(prop);
+              raw_sheet.encounter.turnorder[index][prop] = $(this).val();
+            });
+          }
+
           break;
       }
     }
 
     // HEY BUSTER BROWN WHOEVER DID THIS BETTER FIX IT.
     // WE HAVE JQUERY FOR A REASON
-    document.getElementById("stat_change").style.display ="none";
+    //document.getElementById("stat_change").style.display ="none";
+//
+    //function openStatChange() {
+    //    if(document.getElementById("stat_change").style.display == "block"){ //<<ALSO WHAT IS THIS INDENTING????
+    //         document.getElementById("stat_change").style.display = "none"; //<<IT"S ALL OVER THE PLACE
+    //    }else{
+    //      document.getElementById("stat_change").style.display = "block";
+    //    }
+    //}
 
-    function openStatChange() {
-        if(document.getElementById("stat_change").style.display == "block"){ //<<ALSO WHAT IS THIS INDENTING????
-             document.getElementById("stat_change").style.display = "none"; //<<IT"S ALL OVER THE PLACE
-        }else{
-          document.getElementById("stat_change").style.display = "block";
-        }
-    }
-
-    document.getElementById('stat_btn').addEventListener('click', openStatChange);//smh
+    //document.getElementById('stat_btn').addEventListener('click', openStatChange);//smh
     //^^^^^^^^^^^^^^^^^^^^^^^^^ MAKES ME SICK
+
+    //i had to convert it to jquery cause if the object doesnt exist jquery
+    //will let it slide but document.getElementById breaks everythign
+    $('#stat_change').css('display', 'none');
+    $('#stat_btn').click(()=>{
+      if($('#stat_change').attr('id') == 'block')
+        $('#stat_change').attr('id', 'none');
+      else {
+        $('#stat_change').attr('id', 'block');
+      }
+    });
 
     //function to deal with player adding in csv item (e.g. languages)
     function add_comma_val(but_id, sheet_json) {
@@ -2936,6 +3277,22 @@ $(document).ready(function(){
 			  if(t !== "") socket.send(msg);
 		  }
     });
+
+    //secret dm health roll
+    var rollHealth = function(dice_val, dice_num, const_mod){
+      var roll = 0;
+      for(var i = 0; i < dice_num; i++)
+        roll += Math.floor((Math.random() * dice_val) + 1);
+      roll += (const_mod * dice_num);
+      return roll;
+    }
+
+    //secret dm initiative roll
+    var rollInit = function(dex_mod){
+      var roll = Math.floor((Math.random() * 20) + 1) + dex_mod;
+      //console.log('roll >>> ' + roll);
+      return roll;
+    }
 
     //handle if user asks for dice roll
     $('#dice_roll').click(function(){

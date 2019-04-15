@@ -83,12 +83,12 @@
                                      <input type="radio" name = "roll_view" id ="hide_rolls"><label>Hide rolls</label>
 							</div>
 							<div class="rbtn2">
-                                <input type="radio" name = "roll_view" id ="show_rolls"><label>Show Rolls</label>     
+                                <input type="radio" name = "roll_view" id ="show_rolls"><label>Show Rolls</label>
 							</div>
                     </div>
 
+          {% if isPlayer %}
 					<div class="modal" id="stat_change">
-						{% if isPlayer %}
 						<div class="col" id="psheetchange">
 							<label class="attr_amt">To Modify:</label>
 							<select id ="change_attrs" class="attr_amt">
@@ -113,8 +113,8 @@
 							<button class = "btn attr_amt" id ="up_attr">+</button>
 							<button class = "btn attr_amt" id ="down_attr">-</button>
 						</div>
-						{% endif %}
 					</div>
+          {% endif %}
 				</div>
 			</div>
 		</div>

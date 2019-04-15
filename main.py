@@ -206,6 +206,9 @@ def decide_request(req, uname, isPlayer, clients, room, ip, port):
     else:
        resp = {'msg': uname + ' has entered the room.', 'color': 'red', 'type': 'status',
       'weight': 'normal'}
+  elif req_type == 'dmstatus':
+    #used so the dm code can send status messages
+    resp = {'msg': '<b>' + req['msg'] + '</b>', 'color': 'red', 'type': 'status', 'weight': 'normal'}
   elif req_type == 'text':
     # someone is sending a message
     if isPlayer:
@@ -1672,11 +1675,58 @@ def get_player_stats(uname, isPlayer, room, raw_resp):
                       with tag('div', klass = 'col'):
                         text(monster)
           with tag('div', klass = 'col-xs-8 col-sm-8 col-md-8 no-border dmencountercontent'):
-            with tag('div', klass = 'row'):
-              with tag('div', klass = 'col dmturnorder'):
-                text('turn order stuff here')
-              with tag('div', klass = 'col', id='dmmonsterinfo'):
-                text('specific enemy info here')
+            with tag('div', klass = 'row startEncounter', id='shown'):
+              with tag('div', klass = 'col col-md-12'):
+                with tag('div', klass = 'btn', id='startEncounterBtn'):
+                  text('Start Encounter')
+                with tag('div', klass = 'btn', id='resumeEncounterBtn'):
+                  text('Resume Encounter')
+            with tag('div', klass = 'row encounterstuff', id='hidden'):
+              with tag('div', klass = 'col no-border'):
+                with tag('div', klass = 'row emonstermake', id='shown'):
+                  with tag('div', klass = 'col col-md-12'):
+                    text('Add Monster to Encounter:')
+                    with tag('div', klass = 'row'): #name and randomize name button
+                      with tag('div', klass = 'col col-md-8'):
+                        text('Name:')
+                        doc.asis('<input id="eMName" class="newMonsterTextField" placeholder="Name it">')
+                      with tag('div', klass = 'col col-md-4'):
+                        with tag('div', klass = 'btn', id='randEMName'):
+                          text('Rand')
+                    with tag('div', klass = 'row'): #monster type
+                      with tag('div', klass = 'col col-md-12'):
+                        text('Monster Type:')
+                        doc.asis('<input id="eMType" class="newMonsterTextField" placeholder="<--Select Monster Type" readonly>')
+                    with tag('div', klass = 'row'): #monster health
+                      with tag('div', klass = 'col col-md-6'):
+                        text('Health:')
+                        doc.asis('<input id="eMHealth" class="newMonsterTextField" placeholder="Health">')
+                      with tag('div', klass = 'col col-md-3'):
+                        with tag('div', klass='btn', id='avgHealthBtn'):
+                          text('Avg')
+                      with tag('div', klass = 'col col-md-3'):
+                        with tag('div', klass='btn', id='randHealthBtn'):
+                          text('Rand')
+                    with tag('div', klass = 'row'): #inventory
+                      with tag('div', klass = 'col col-md-12'):
+                        with tag('textarea', klass = 'newMonsterTextField', id = "eMInven", placeholder = 'Monster\'s Inventory'):
+                          text('')
+                    with tag('div', klass = 'row'): #add buttons
+                      with tag('div', klass = 'col'):
+                        with tag('div', klass = 'btn', id='add2Encounter'):
+                          text('Add Monster')
+                        with tag('div', klass = 'btn', id='rollInit'):
+                          text('Roll Initiative')
+                with tag('div', klass = 'row controlbtns', id='hidden'):
+                  with tag('div', klass = 'col'):
+                    with tag('div', klass = 'btn', id='nextTurnBtn'):
+                      text('Next Turn')
+                    with tag('div', klass = 'btn', id='endEncBtn'):
+                      text('End Encounter')
+                with tag('div', klass = 'row', id='dmturnorder'):
+                  with tag('div', klass = 'col', id='encounterList'):
+                    text('')
+
 
   resp = doc.getvalue()
   print('returning from get_stats')
